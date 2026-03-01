@@ -331,16 +331,31 @@ async function loadLibrary() {
 
     card.innerHTML = `
       <img src="${album.cover}" alt="${album.name}" />
-      <div>
+      <div style="flex:1">
         <div class="library-name">${album.name}</div>
         <div class="library-artist">${album.artist}</div>
         <div class="library-stars">${starsHtml}</div>
         ${album.thoughts ? `<div class="library-thoughts">"${album.thoughts}"</div>` : ""}
         ${album.release_date ? `<div style="font-size:11px;color:#444;margin-top:6px">${album.release_date}${album.genres ? " · " + album.genres : ""}</div>` : ""}
       </div>
+      <button class="delete-btn" title="Remove from library">✕</button>
     `;
 
-    // Click to open in search panel
+    // Delete button
+    card.querySelector(".delete-btn").addEventListener("click", async (e) => {
+      e.stopPropagation(); // don't open the album
+      if (!confirm(`Remove "${album.name}" from your library?`)) return;
+      await sb.from("tracks").delete().eq("album_id", album.id).eq("user_id", currentUser.id);
+      await sb.from("albums").delete().eq("id", album.id).eq("user_id", currentUser.id);
+      card.remove();
+      // Show empty state if no cards left
+      if (!document.querySelector(".library-card")) {
+        document.getElementById("library-content").innerHTML =
+          "<p style='color:#555;font-size:14px;letter-spacing:1px'>No albums saved yet. Rate or review an album to add it here.</p>";
+      }
+    });
+
+    // Click card to open album
     card.addEventListener("click", () => {
       document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
       document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));

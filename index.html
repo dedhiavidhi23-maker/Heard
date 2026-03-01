@@ -2,51 +2,389 @@
 <html>
   <head>
     <title>HEARD</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
+      :root {
+        --bg: #0a0a0a;
+        --surface: #141414;
+        --border: #222;
+        --accent: #e8ff47;
+        --text: #f0f0f0;
+        --muted: #555;
+        --saved: #4ade80;
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
       body {
-        font-family: Arial;
-        padding: 20px;
-        background: #111;
-        color: white;
+        font-family: 'DM Sans', sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
       }
 
-      input {
-        padding: 10px;
-        width: 300px;
-        margin-bottom: 20px;
+      /* AUTH SCREEN */
+      #auth-screen {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        gap: 24px;
       }
 
-      img {
+      #auth-screen h1 {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 80px;
+        letter-spacing: 8px;
+        color: var(--accent);
+      }
+
+      #auth-screen p {
+        color: var(--muted);
+        font-size: 14px;
+        letter-spacing: 1px;
+      }
+
+      #google-login-btn {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: white;
+        color: #333;
+        border: none;
+        padding: 14px 28px;
+        border-radius: 4px;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 15px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: opacity 0.2s;
+      }
+
+      #google-login-btn:hover { opacity: 0.9; }
+      #google-login-btn svg { width: 20px; height: 20px; }
+
+      /* MAIN APP */
+      #app { display: none; }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 24px 40px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      header h1 {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 36px;
+        letter-spacing: 6px;
+        color: var(--accent);
+      }
+
+      #user-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      #user-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
         display: block;
       }
 
+      #logout-btn {
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        padding: 4px 10px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 12px;
+        transition: border-color 0.2s;
+      }
+
+      #logout-btn:hover { border-color: var(--muted); }
+
+      nav {
+        display: flex;
+        padding: 0 40px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .tab {
+        padding: 16px 24px;
+        font-size: 12px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        cursor: pointer;
+        color: var(--muted);
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+      }
+
+      .tab.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+      }
+
+      .panel { display: none; padding: 40px; }
+      .panel.active { display: block; }
+
+      #search {
+        width: 100%;
+        max-width: 500px;
+        padding: 14px 18px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 15px;
+        outline: none;
+        transition: border-color 0.2s;
+        margin-bottom: 36px;
+        display: block;
+      }
+
+      #search:focus { border-color: var(--accent); }
+      #search::placeholder { color: var(--muted); }
+
+      .album-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 24px;
+      }
+
+      .album-card { cursor: pointer; transition: transform 0.2s; }
+      .album-card:hover { transform: translateY(-4px); }
+
+      .album-card img {
+        width: 100%;
+        aspect-ratio: 1;
+        object-fit: cover;
+        border-radius: 4px;
+        display: block;
+      }
+
+      .album-card .album-name {
+        font-size: 13px;
+        font-weight: 500;
+        margin-top: 10px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .album-card .album-artist {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 3px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* TRACK PANEL */
+      #track-panel {
+        display: none;
+        padding: 40px;
+        border-top: 1px solid var(--border);
+        background: var(--surface);
+      }
+
+      #track-panel.open { display: block; }
+
+      #track-header {
+        display: flex;
+        gap: 28px;
+        margin-bottom: 32px;
+        align-items: flex-start;
+      }
+
+      #tp-cover {
+        width: 160px;
+        height: 160px;
+        object-fit: cover;
+        border-radius: 4px;
+        flex-shrink: 0;
+        display: block;
+      }
+
+      #track-meta h2 {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 32px;
+        letter-spacing: 2px;
+        margin-bottom: 4px;
+      }
+
+      .meta-artist { color: var(--muted); font-size: 14px; margin-bottom: 6px; }
+      .meta-details { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+
+      .stars { display: flex; gap: 4px; margin-bottom: 12px; }
+
+      .star {
+        font-size: 22px;
+        cursor: pointer;
+        color: var(--border);
+        transition: color 0.15s;
+        line-height: 1;
+      }
+
+      .star.filled { color: var(--accent); }
+
       textarea {
-        width: 300px;
-        height: 60px;
-        margin-bottom: 10px;
+        width: 100%;
+        max-width: 420px;
+        height: 70px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 13px;
+        padding: 10px 12px;
+        resize: none;
+        outline: none;
+        transition: border-color 0.2s;
+        display: block;
       }
 
-      #results div {
-        margin-bottom: 20px;
+      textarea:focus { border-color: var(--accent); }
+      textarea::placeholder { color: var(--muted); }
+
+      .saved-badge {
+        font-size: 11px;
+        color: var(--saved);
+        letter-spacing: 1px;
+        opacity: 0;
+        transition: opacity 0.4s;
+        display: inline-block;
+        margin-top: 6px;
       }
 
-      #tracks div {
-        margin-bottom: 20px;
+      .saved-badge.show { opacity: 1; }
+
+      #tracks-list { margin-top: 32px; }
+
+      .track-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        padding: 16px 0;
+        border-bottom: 1px solid var(--border);
       }
+
+      .track-num {
+        color: var(--muted);
+        font-size: 12px;
+        width: 20px;
+        flex-shrink: 0;
+        padding-top: 3px;
+      }
+
+      .track-info { flex: 1; }
+      .track-name { font-size: 14px; font-weight: 500; margin-bottom: 8px; }
+
+      /* LIBRARY */
+      #library-empty { color: var(--muted); font-size: 14px; letter-spacing: 1px; }
+
+      .library-card {
+        display: flex;
+        gap: 20px;
+        padding: 20px;
+        background: var(--surface);
+        border-radius: 6px;
+        margin-bottom: 16px;
+        cursor: pointer;
+        border: 1px solid var(--border);
+        transition: border-color 0.2s;
+      }
+
+      .library-card:hover { border-color: var(--muted); }
+
+      .library-card img {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 3px;
+        flex-shrink: 0;
+        display: block;
+      }
+
+      .library-name { font-size: 15px; font-weight: 500; margin-bottom: 3px; }
+      .library-artist { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+      .library-stars .star { font-size: 15px; cursor: default; }
+      .library-thoughts { font-size: 12px; color: var(--muted); margin-top: 6px; font-style: italic; }
+
+      #loading { display: none; color: var(--muted); font-size: 12px; letter-spacing: 2px; margin-bottom: 20px; }
     </style>
   </head>
 
   <body>
-    <h1>HEARD</h1>
 
-    <input id="search" placeholder="Search album..." />
+    <div id="auth-screen">
+      <h1>HEARD</h1>
+      <p>your music, your thoughts</p>
+      <button id="google-login-btn">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+    </div>
 
-    <h2>Albums</h2>
-    <div id="results"></div>
+    <div id="app">
+      <header>
+        <h1>HEARD</h1>
+        <div id="user-info">
+          <img id="user-avatar" src="" alt="" />
+          <span id="user-name"></span>
+          <button id="logout-btn">Log out</button>
+        </div>
+      </header>
 
-    <h2>Tracks</h2>
-    <div id="tracks"></div>
+      <nav>
+        <div class="tab active" data-tab="search">Search</div>
+        <div class="tab" data-tab="library">My Library</div>
+      </nav>
 
+      <div class="panel active" id="search-panel">
+        <input id="search" placeholder="Search for an album..." />
+        <div id="loading">Searching...</div>
+        <div id="results" class="album-grid"></div>
+      </div>
+
+      <div class="panel" id="library-panel">
+        <div id="library-content"></div>
+      </div>
+
+      <div id="track-panel">
+        <div id="track-header">
+          <img id="tp-cover" src="" alt="" />
+          <div id="track-meta">
+            <h2 id="tp-name"></h2>
+            <div class="meta-artist" id="tp-artist"></div>
+            <div class="meta-details" id="tp-details"></div>
+            <div class="stars" id="album-stars"></div>
+            <textarea id="album-thoughts" placeholder="Your thoughts on this album..."></textarea>
+            <span class="saved-badge" id="album-saved">Saved ✓</span>
+          </div>
+        </div>
+        <div id="tracks-list"></div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js"></script>
   </body>
 </html>

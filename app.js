@@ -7,7 +7,7 @@ const sb = createClient(
 
 // ── State ────────────────────────────────────────────────────────
 let currentUser = null;
-let currentAlbum = null; // { id, name, artist, cover, release_date, genres }
+let currentAlbum = null;
 let saveThoughtsTimer = null;
 
 // ── Auth ─────────────────────────────────────────────────────────
@@ -142,7 +142,12 @@ function renderStars(selected) {
     const star = document.createElement("span");
     star.className = "star" + (i <= selected ? " filled" : "");
     star.textContent = "★";
-    star.addEventListener("click", () => saveAlbumField("rating", i));
+    star.addEventListener("click", () => {
+      container.dataset.rating = i;
+      highlightStars(i);
+      // autosave rating immediately
+      autoSaveAlbum();
+    });
     star.addEventListener("mouseover", () => highlightStars(i));
     star.addEventListener("mouseout", () => {
       // restore actual saved state
@@ -160,15 +165,11 @@ function highlightStars(n) {
   });
 }
 
-// ── Save Album Field ──────────────────────────────────────────────
-async function saveAlbumField(field, value) {
+// ── Auto Save Album (silent, no button feedback) ──────────────────
+async function autoSaveAlbum() {
   if (!currentAlbum || !currentUser) return;
-
-  if (field === "rating") {
-    document.getElementById("album-stars").dataset.rating = value;
-    highlightStars(value);
-  }
-
+  const rating = parseInt(document.getElementById("album-stars").dataset.rating || "0");
+  const thoughts = document.getElementById("album-thoughts").value;
   await sb.from("albums").upsert({
     id: currentAlbum.id,
     user_id: currentUser.id,
@@ -177,26 +178,73 @@ async function saveAlbumField(field, value) {
     cover: currentAlbum.cover,
     release_date: currentAlbum.release_date,
     genres: currentAlbum.genres,
-    [field]: value
+    rating,
+    thoughts
+  }, { onConflict: "id,user_id" });
+}
+
+// Album thoughts autosave (debounced)
+document.getElementById("album-thoughts").addEventListener("input", () => {
+  clearTimeout(saveThoughtsTimer);
+  saveThoughtsTimer = setTimeout(() => autoSaveAlbum(), 800);
+});
+async function saveAll() {
+  if (!currentAlbum || !currentUser) return;
+
+  const btn = document.getElementById("save-btn");
+  btn.textContent = "Saving...";
+  btn.disabled = true;
+
+  const rating = parseInt(document.getElementById("album-stars").dataset.rating || "0");
+  const thoughts = document.getElementById("album-thoughts").value;
+
+  // Save album
+  await sb.from("albums").upsert({
+    id: currentAlbum.id,
+    user_id: currentUser.id,
+    name: currentAlbum.name,
+    artist: currentAlbum.artist,
+    cover: currentAlbum.cover,
+    release_date: currentAlbum.release_date,
+    genres: currentAlbum.genres,
+    rating,
+    thoughts
   }, { onConflict: "id,user_id" });
 
-  showSavedBadge("album-saved");
+  // Save all track reviews
+  const trackItems = document.querySelectorAll(".track-item");
+  const upserts = [];
+  trackItems.forEach(item => {
+    const trackId = item.dataset.trackId;
+    const trackNum = parseInt(item.dataset.trackNum);
+    const trackName = item.dataset.trackName;
+    const review = item.querySelector("textarea").value;
+    upserts.push({
+      id: trackId,
+      user_id: currentUser.id,
+      album_id: currentAlbum.id,
+      name: trackName,
+      track_number: trackNum,
+      review
+    });
+  });
+
+  if (upserts.length > 0) {
+    await sb.from("tracks").upsert(upserts, { onConflict: "id,user_id" });
+  }
+
+  btn.textContent = "Saved ✓";
+  btn.style.borderColor = "var(--saved)";
+  btn.style.color = "var(--saved)";
+  setTimeout(() => {
+    btn.textContent = "Save";
+    btn.style.borderColor = "";
+    btn.style.color = "";
+    btn.disabled = false;
+  }, 2000);
 }
 
-// ── Album Thoughts (debounced) ────────────────────────────────────
-document.getElementById("album-thoughts").addEventListener("input", (e) => {
-  clearTimeout(saveThoughtsTimer);
-  saveThoughtsTimer = setTimeout(() => {
-    saveAlbumField("thoughts", e.target.value);
-  }, 800);
-});
 
-// ── Saved Badge ──────────────────────────────────────────────────
-function showSavedBadge(id) {
-  const badge = document.getElementById(id);
-  badge.classList.add("show");
-  setTimeout(() => badge.classList.remove("show"), 2000);
-}
 
 // ── Render Tracks ────────────────────────────────────────────────
 async function renderTracks(tracks) {
@@ -216,15 +264,15 @@ async function renderTracks(tracks) {
   tracks.forEach(track => {
     const item = document.createElement("div");
     item.className = "track-item";
-
-    const badgeId = `saved-track-${track.id}`;
+    item.dataset.trackId = track.id;
+    item.dataset.trackNum = track.track_number;
+    item.dataset.trackName = track.name;
 
     item.innerHTML = `
       <div class="track-num">${track.track_number}</div>
       <div class="track-info">
         <div class="track-name">${track.name}</div>
         <textarea placeholder="Your thoughts on this track...">${reviewMap[track.id] || ""}</textarea>
-        <span class="saved-badge" id="${badgeId}">Saved ✓</span>
       </div>
     `;
 
@@ -242,7 +290,6 @@ async function renderTracks(tracks) {
           track_number: track.track_number,
           review: textarea.value
         }, { onConflict: "id,user_id" });
-        showSavedBadge(badgeId);
       }, 800);
     });
 

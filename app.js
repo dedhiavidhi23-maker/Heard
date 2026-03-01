@@ -169,7 +169,11 @@ function highlightStars(n) {
 async function autoSaveAlbum() {
   if (!currentAlbum || !currentUser) return;
   const rating = parseInt(document.getElementById("album-stars").dataset.rating || "0");
-  const thoughts = document.getElementById("album-thoughts").value;
+  const thoughts = document.getElementById("album-thoughts").value.trim();
+
+  // Only save if the user has actually added something
+  if (!rating && !thoughts) return;
+
   await sb.from("albums").upsert({
     id: currentAlbum.id,
     user_id: currentUser.id,
@@ -196,20 +200,22 @@ async function saveAll() {
   btn.disabled = true;
 
   const rating = parseInt(document.getElementById("album-stars").dataset.rating || "0");
-  const thoughts = document.getElementById("album-thoughts").value;
+  const thoughts = document.getElementById("album-thoughts").value.trim();
 
-  // Save album
-  await sb.from("albums").upsert({
-    id: currentAlbum.id,
-    user_id: currentUser.id,
-    name: currentAlbum.name,
-    artist: currentAlbum.artist,
-    cover: currentAlbum.cover,
-    release_date: currentAlbum.release_date,
-    genres: currentAlbum.genres,
-    rating,
-    thoughts
-  }, { onConflict: "id,user_id" });
+  // Only save album if user added a rating or thoughts
+  if (rating || thoughts) {
+    await sb.from("albums").upsert({
+      id: currentAlbum.id,
+      user_id: currentUser.id,
+      name: currentAlbum.name,
+      artist: currentAlbum.artist,
+      cover: currentAlbum.cover,
+      release_date: currentAlbum.release_date,
+      genres: currentAlbum.genres,
+      rating,
+      thoughts
+    }, { onConflict: "id,user_id" });
+  }
 
   // Save all track reviews
   const trackItems = document.querySelectorAll(".track-item");

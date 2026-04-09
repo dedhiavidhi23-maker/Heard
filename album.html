@@ -4,56 +4,31 @@
     <title>HEARD</title>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
-      :root {
-        --bg: #0a0a0a;
-        --surface: #141414;
-        --border: #222;
-        --accent: #e8ff47;
-        --text: #f0f0f0;
-        --muted: #555;
-        --saved: #4ade80;
-      }
-
       * { box-sizing: border-box; margin: 0; padding: 0; }
 
       body {
         font-family: 'DM Sans', sans-serif;
-        background: var(--bg);
-        color: var(--text);
         min-height: 100vh;
+        background: #0a0a0a;
+        color: #f0f0f0;
+        transition: background 0.6s ease, color 0.4s ease;
       }
 
+      /* HEADER */
       header {
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        gap: 20px;
         padding: 24px 40px;
-        border-bottom: 1px solid var(--border);
-      }
-
-      header h1 {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 36px;
-        letter-spacing: 6px;
-        color: var(--accent);
-        text-decoration: none;
-      }
-
-      header a {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 36px;
-        letter-spacing: 6px;
-        color: var(--accent);
-        text-decoration: none;
       }
 
       #back-btn {
         display: flex;
         align-items: center;
-        gap: 8px;
-        background: none;
-        border: 1px solid var(--border);
-        color: var(--muted);
+        gap: 6px;
+        background: rgba(0,0,0,0.25);
+        border: 1px solid rgba(255,255,255,0.15);
+        color: inherit;
         padding: 8px 16px;
         border-radius: 3px;
         cursor: pointer;
@@ -61,60 +36,96 @@
         font-size: 12px;
         letter-spacing: 1px;
         text-transform: uppercase;
-        transition: border-color 0.2s, color 0.2s;
+        transition: background 0.2s;
       }
 
-      #back-btn:hover { border-color: var(--accent); color: var(--accent); }
+      #back-btn:hover { background: rgba(0,0,0,0.4); }
 
+      header a {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 28px;
+        letter-spacing: 6px;
+        color: inherit;
+        text-decoration: none;
+        opacity: 0.5;
+      }
+
+      /* LOADING */
       #loading-page {
         display: flex;
         align-items: center;
         justify-content: center;
         min-height: 60vh;
-        color: var(--muted);
         font-size: 13px;
         letter-spacing: 2px;
+        opacity: 0.4;
       }
 
-      #album-page { display: none; padding: 48px 40px; max-width: 900px; }
+      /* NOT LOGGED IN */
+      #not-logged-in {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 60vh;
+        gap: 16px;
+        font-size: 14px;
+        opacity: 0.6;
+      }
 
-      /* ALBUM HERO */
+      #not-logged-in a {
+        color: inherit;
+        font-size: 13px;
+        letter-spacing: 1px;
+        border-bottom: 1px solid currentColor;
+        padding-bottom: 2px;
+        text-decoration: none;
+      }
+
+      /* ALBUM PAGE */
+      #album-page {
+        display: none;
+        padding: 0 40px 60px;
+        max-width: 860px;
+      }
+
+      /* HERO */
       .album-hero {
         display: flex;
         gap: 40px;
-        margin-bottom: 48px;
-        align-items: flex-start;
+        margin-bottom: 52px;
+        align-items: flex-end;
       }
 
       .album-hero img {
-        width: 220px;
-        height: 220px;
+        width: 200px;
+        height: 200px;
         object-fit: cover;
         border-radius: 6px;
         flex-shrink: 0;
         display: block;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.4);
       }
 
-      .album-hero-info { flex: 1; }
+      .album-hero-info { flex: 1; padding-bottom: 4px; }
 
       .album-hero-info h1 {
         font-family: 'Bebas Neue', sans-serif;
-        font-size: 48px;
-        letter-spacing: 3px;
+        font-size: 52px;
+        letter-spacing: 2px;
         line-height: 1;
         margin-bottom: 8px;
       }
 
       .hero-artist {
         font-size: 16px;
-        color: var(--muted);
-        margin-bottom: 6px;
+        opacity: 0.7;
+        margin-bottom: 4px;
       }
 
       .hero-meta {
         font-size: 12px;
-        color: var(--muted);
+        opacity: 0.45;
         margin-bottom: 24px;
         letter-spacing: 1px;
       }
@@ -125,22 +136,22 @@
       .star {
         font-size: 26px;
         cursor: pointer;
-        color: var(--border);
-        transition: color 0.15s;
+        opacity: 0.25;
+        transition: opacity 0.15s;
         line-height: 1;
       }
 
-      .star.filled { color: var(--accent); }
+      .star.filled { opacity: 1; }
 
       /* THOUGHTS */
       #album-thoughts {
         width: 100%;
-        max-width: 480px;
-        height: 80px;
-        background: var(--surface);
-        border: 1px solid var(--border);
+        max-width: 460px;
+        height: 75px;
+        background: rgba(0,0,0,0.2);
+        border: 1px solid rgba(255,255,255,0.15);
         border-radius: 4px;
-        color: var(--text);
+        color: inherit;
         font-family: 'DM Sans', sans-serif;
         font-size: 13px;
         padding: 10px 12px;
@@ -148,53 +159,42 @@
         outline: none;
         transition: border-color 0.2s;
         display: block;
-        margin-bottom: 16px;
       }
 
-      #album-thoughts:focus { border-color: var(--accent); }
-      #album-thoughts::placeholder { color: var(--muted); }
+      #album-thoughts:focus { border-color: rgba(255,255,255,0.4); }
+      #album-thoughts::placeholder { opacity: 0.3; color: inherit; }
 
-      #save-btn {
-        padding: 12px 36px;
-        background: none;
-        border: 1px solid var(--accent);
-        color: var(--accent);
-        font-family: 'DM Sans', sans-serif;
-        font-size: 12px;
-        letter-spacing: 3px;
-        text-transform: uppercase;
-        cursor: pointer;
-        border-radius: 3px;
-        transition: background 0.2s, color 0.2s;
+      /* DIVIDER */
+      .divider {
+        border: none;
+        border-top: 1px solid rgba(255,255,255,0.12);
+        margin-bottom: 32px;
       }
-
-      #save-btn:hover:not(:disabled) { background: var(--accent); color: #000; }
-      #save-btn:disabled { opacity: 0.6; cursor: default; }
 
       /* TRACKS */
       .tracks-section h2 {
         font-family: 'Bebas Neue', sans-serif;
-        font-size: 22px;
-        letter-spacing: 3px;
-        color: var(--muted);
-        margin-bottom: 16px;
+        font-size: 18px;
+        letter-spacing: 4px;
+        opacity: 0.35;
+        margin-bottom: 8px;
       }
 
       .track-item {
         display: flex;
         align-items: flex-start;
         gap: 16px;
-        padding: 18px 0;
-        border-bottom: 1px solid var(--border);
+        padding: 16px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
       }
 
       .track-num {
-        color: var(--muted);
         font-size: 12px;
         width: 24px;
         flex-shrink: 0;
         padding-top: 3px;
         text-align: right;
+        opacity: 0.3;
       }
 
       .track-info { flex: 1; }
@@ -208,11 +208,11 @@
       .track-textarea {
         width: 100%;
         max-width: 520px;
-        height: 60px;
-        background: var(--bg);
-        border: 1px solid var(--border);
+        height: 56px;
+        background: rgba(0,0,0,0.2);
+        border: 1px solid rgba(255,255,255,0.1);
         border-radius: 4px;
-        color: var(--text);
+        color: inherit;
         font-family: 'DM Sans', sans-serif;
         font-size: 13px;
         padding: 8px 12px;
@@ -222,36 +222,15 @@
         display: block;
       }
 
-      .track-textarea:focus { border-color: var(--accent); }
-      .track-textarea::placeholder { color: var(--muted); }
-
-      /* NOT LOGGED IN */
-      #not-logged-in {
-        display: none;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-height: 60vh;
-        gap: 16px;
-        color: var(--muted);
-        font-size: 14px;
-      }
-
-      #not-logged-in a {
-        color: var(--accent);
-        text-decoration: none;
-        font-size: 13px;
-        letter-spacing: 1px;
-        border-bottom: 1px solid var(--accent);
-        padding-bottom: 2px;
-      }
+      .track-textarea:focus { border-color: rgba(255,255,255,0.35); }
+      .track-textarea::placeholder { opacity: 0.3; color: inherit; }
     </style>
   </head>
 
   <body>
     <header>
-      <a href="index.html">HEARD</a>
       <button id="back-btn" onclick="history.back()">← Back</button>
+      <a href="index.html">HEARD</a>
     </header>
 
     <div id="loading-page">Loading...</div>
@@ -262,16 +241,17 @@
 
     <div id="album-page">
       <div class="album-hero">
-        <img id="cover" src="" alt="" />
+        <img id="cover" src="" alt="" crossorigin="anonymous" />
         <div class="album-hero-info">
           <h1 id="album-name"></h1>
           <div class="hero-artist" id="album-artist"></div>
           <div class="hero-meta" id="album-meta"></div>
           <div class="stars" id="album-stars"></div>
           <textarea id="album-thoughts" placeholder="Your thoughts on this album..."></textarea>
-          <button id="save-btn" onclick="saveAll()">Save Everything</button>
         </div>
       </div>
+
+      <hr class="divider" />
 
       <div class="tracks-section">
         <h2>Tracks</h2>
@@ -290,18 +270,13 @@
       let currentUser = null;
       let currentAlbum = null;
       let saveThoughtsTimer = null;
-
-      // Get album ID from URL
       const albumId = new URLSearchParams(window.location.search).get("id");
 
+      // ── Session ──────────────────────────────────────────────────
       sb.auth.getSession().then(async ({ data: { session } }) => {
         if (session?.user) {
           currentUser = session.user;
-          if (albumId) {
-            await loadAlbumPage(albumId);
-          } else {
-            window.location.href = "index.html";
-          }
+          albumId ? await loadAlbumPage(albumId) : window.location.href = "index.html";
         } else {
           document.getElementById("loading-page").style.display = "none";
           document.getElementById("not-logged-in").style.display = "flex";
@@ -310,20 +285,11 @@
 
       sb.auth.onAuthStateChange(async (_event, session) => {
         if (_event === "INITIAL_SESSION") return;
-        if (session?.user) {
-          currentUser = session.user;
-          if (albumId && !document.getElementById("album-page").style.display === "block") {
-            await loadAlbumPage(albumId);
-          }
-        } else {
-          window.location.href = "index.html";
-        }
+        if (!session?.user) window.location.href = "index.html";
       });
 
+      // ── Load Album ───────────────────────────────────────────────
       async function loadAlbumPage(id) {
-        document.getElementById("loading-page").style.display = "flex";
-
-        // Fetch album details from Spotify
         const [albumRes, tracksRes] = await Promise.all([
           fetch(`/api/album?id=${id}`),
           fetch(`/api/tracks?id=${id}`)
@@ -341,7 +307,6 @@
           genres: (albumData.genres || []).join(", ")
         };
 
-        // Fill in hero
         document.getElementById("cover").src = currentAlbum.cover;
         document.getElementById("album-name").textContent = currentAlbum.name;
         document.getElementById("album-artist").textContent = currentAlbum.artist;
@@ -349,23 +314,17 @@
           [currentAlbum.release_date, currentAlbum.genres].filter(Boolean).join(" · ");
         document.title = `${currentAlbum.name} — HEARD`;
 
-        // Load saved album data
+        // Load saved data
         const { data: saved } = await sb
-          .from("albums")
-          .select("rating, thoughts")
-          .eq("id", id)
-          .eq("user_id", currentUser.id)
-          .single();
+          .from("albums").select("rating, thoughts")
+          .eq("id", id).eq("user_id", currentUser.id).single();
 
         renderStars(saved?.rating || 0);
         document.getElementById("album-thoughts").value = saved?.thoughts || "";
 
-        // Load saved track reviews
         const { data: savedReviews } = await sb
-          .from("tracks")
-          .select("id, review")
-          .eq("album_id", id)
-          .eq("user_id", currentUser.id);
+          .from("tracks").select("id, review")
+          .eq("album_id", id).eq("user_id", currentUser.id);
 
         const reviewMap = {};
         (savedReviews || []).forEach(r => { reviewMap[r.id] = r.review; });
@@ -378,46 +337,85 @@
           item.dataset.trackId = track.id;
           item.dataset.trackNum = track.track_number;
           item.dataset.trackName = track.name;
-
           item.innerHTML = `
             <div class="track-num">${track.track_number}</div>
             <div class="track-info">
               <div class="track-name">${track.name}</div>
-              <textarea class="track-textarea" placeholder="Your thoughts on this track...">${reviewMap[track.id] || ""}</textarea>
+              <textarea class="track-textarea" placeholder="Your thoughts...">${reviewMap[track.id] || ""}</textarea>
             </div>
           `;
-
-          // Autosave track review
           const textarea = item.querySelector("textarea");
-          let trackTimer = null;
+          let t = null;
           textarea.addEventListener("input", () => {
-            clearTimeout(trackTimer);
-            trackTimer = setTimeout(async () => {
-              await sb.from("tracks").upsert({
-                id: track.id,
-                user_id: currentUser.id,
-                album_id: currentAlbum.id,
-                name: track.name,
-                track_number: track.track_number,
-                review: textarea.value
-              }, { onConflict: "id,user_id" });
-            }, 800);
+            clearTimeout(t);
+            t = setTimeout(() => sb.from("tracks").upsert({
+              id: track.id, user_id: currentUser.id,
+              album_id: currentAlbum.id, name: track.name,
+              track_number: track.track_number, review: textarea.value
+            }, { onConflict: "id,user_id" }), 800);
           });
-
           list.appendChild(item);
         });
 
         document.getElementById("loading-page").style.display = "none";
         document.getElementById("album-page").style.display = "block";
 
-        // Autosave album thoughts
+        // Autosave thoughts
         document.getElementById("album-thoughts").addEventListener("input", () => {
           clearTimeout(saveThoughtsTimer);
           saveThoughtsTimer = setTimeout(() => autoSaveAlbum(), 800);
         });
+
+        // Extract colour from cover
+        extractColour(currentAlbum.cover);
       }
 
-      // ── Stars ──────────────────────────────────────────────────
+      // ── Extract Dominant Colour ──────────────────────────────────
+      function extractColour(imageUrl) {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = imageUrl;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = 10;
+          canvas.height = 10;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, 10, 10);
+          const pixels = ctx.getImageData(0, 0, 10, 10).data;
+
+          // Average the pixel colours
+          let r = 0, g = 0, b = 0, count = 0;
+          for (let i = 0; i < pixels.length; i += 4) {
+            r += pixels[i];
+            g += pixels[i + 1];
+            b += pixels[i + 2];
+            count++;
+          }
+          r = Math.floor(r / count);
+          g = Math.floor(g / count);
+          b = Math.floor(b / count);
+
+          // Darken a bit so it's not too garish
+          r = Math.floor(r * 0.55);
+          g = Math.floor(g * 0.55);
+          b = Math.floor(b * 0.55);
+
+          // Decide text colour based on luminance
+          const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+          const textColor = luminance > 0.45 ? "#111111" : "#f0f0f0";
+
+          document.body.style.background = `rgb(${r},${g},${b})`;
+          document.body.style.color = textColor;
+        };
+
+        // Fallback if CORS blocks it
+        img.onerror = () => {
+          document.body.style.background = "#0a0a0a";
+          document.body.style.color = "#f0f0f0";
+        };
+      }
+
+      // ── Stars ────────────────────────────────────────────────────
       function renderStars(selected) {
         const container = document.getElementById("album-stars");
         container.innerHTML = "";
@@ -431,9 +429,7 @@
             autoSaveAlbum();
           });
           star.addEventListener("mouseover", () => highlightStars(i));
-          star.addEventListener("mouseout", () => {
-            highlightStars(parseInt(container.dataset.rating || "0"));
-          });
+          star.addEventListener("mouseout", () => highlightStars(parseInt(container.dataset.rating || "0")));
           container.appendChild(star);
         }
         container.dataset.rating = selected;
@@ -445,77 +441,18 @@
         });
       }
 
-      // ── Auto Save ──────────────────────────────────────────────
+      // ── Auto Save ────────────────────────────────────────────────
       async function autoSaveAlbum() {
         if (!currentAlbum || !currentUser) return;
         const rating = parseInt(document.getElementById("album-stars").dataset.rating || "0");
         const thoughts = document.getElementById("album-thoughts").value.trim();
         if (!rating && !thoughts) return;
-
         await sb.from("albums").upsert({
-          id: currentAlbum.id,
-          user_id: currentUser.id,
-          name: currentAlbum.name,
-          artist: currentAlbum.artist,
-          cover: currentAlbum.cover,
-          release_date: currentAlbum.release_date,
-          genres: currentAlbum.genres,
-          rating,
-          thoughts
+          id: currentAlbum.id, user_id: currentUser.id,
+          name: currentAlbum.name, artist: currentAlbum.artist,
+          cover: currentAlbum.cover, release_date: currentAlbum.release_date,
+          genres: currentAlbum.genres, rating, thoughts
         }, { onConflict: "id,user_id" });
-      }
-
-      // ── Save All ───────────────────────────────────────────────
-      async function saveAll() {
-        if (!currentAlbum || !currentUser) return;
-
-        const btn = document.getElementById("save-btn");
-        btn.textContent = "Saving...";
-        btn.disabled = true;
-
-        const rating = parseInt(document.getElementById("album-stars").dataset.rating || "0");
-        const thoughts = document.getElementById("album-thoughts").value.trim();
-
-        if (rating || thoughts) {
-          await sb.from("albums").upsert({
-            id: currentAlbum.id,
-            user_id: currentUser.id,
-            name: currentAlbum.name,
-            artist: currentAlbum.artist,
-            cover: currentAlbum.cover,
-            release_date: currentAlbum.release_date,
-            genres: currentAlbum.genres,
-            rating,
-            thoughts
-          }, { onConflict: "id,user_id" });
-        }
-
-        const trackItems = document.querySelectorAll(".track-item");
-        const upserts = [];
-        trackItems.forEach(item => {
-          upserts.push({
-            id: item.dataset.trackId,
-            user_id: currentUser.id,
-            album_id: currentAlbum.id,
-            name: item.dataset.trackName,
-            track_number: parseInt(item.dataset.trackNum),
-            review: item.querySelector("textarea").value
-          });
-        });
-
-        if (upserts.length > 0) {
-          await sb.from("tracks").upsert(upserts, { onConflict: "id,user_id" });
-        }
-
-        btn.textContent = "Saved ✓";
-        btn.style.borderColor = "var(--saved)";
-        btn.style.color = "var(--saved)";
-        setTimeout(() => {
-          btn.textContent = "Save Everything";
-          btn.style.borderColor = "";
-          btn.style.color = "";
-          btn.disabled = false;
-        }, 2000);
       }
     </script>
   </body>

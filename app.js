@@ -68,11 +68,13 @@ document.getElementById("signup-btn").addEventListener("click", async () => {
     return;
   }
 
-  // Save username to profiles table
-  await sb.from("profiles").upsert({
-    user_id: data.user.id,
-    username
-  });
+  // Save username immediately using the user id
+  if (data.user) {
+    await sb.from("profiles").upsert({
+      user_id: data.user.id,
+      username
+    });
+  }
 
   btn.textContent = "Create Account";
   btn.disabled = false;
@@ -132,12 +134,17 @@ async function showApp() {
   document.getElementById("auth-screen").style.display = "none";
   document.getElementById("app").style.display = "block";
 
-  // Load profile
-  const { data: profile } = await sb
-    .from("profiles")
-    .select("*")
-    .eq("user_id", currentUser.id)
-    .single();
+  // Retry a couple times in case profile isn't saved yet
+  let profile = null;
+  for (let i = 0; i < 3; i++) {
+    const { data } = await sb
+      .from("profiles")
+      .select("*")
+      .eq("user_id", currentUser.id)
+      .single();
+    if (data?.username) { profile = data; break; }
+    await new Promise(r => setTimeout(r, 500));
+  }
 
   const displayName = profile?.username || currentUser.email.split("@")[0];
   document.getElementById("user-name").textContent = displayName;
@@ -148,7 +155,6 @@ async function showApp() {
     avatar.style.display = "block";
   }
 
-  // Pre-fill profile form
   if (profile) {
     document.getElementById("profile-username").value = profile.username || "";
     document.getElementById("profile-bio").value = profile.bio || "";

@@ -10,23 +10,105 @@ let currentUser = null;
 let currentAlbum = null;
 let saveThoughtsTimer = null;
 
-// ── Auth ─────────────────────────────────────────────────────────
-document.getElementById("google-login-btn").addEventListener("click", async () => {
-  await sb.auth.signInWithOAuth({
-    provider: "google",
-    options: { redirectTo: window.location.origin }
+// ── Auth Tabs ────────────────────────────────────────────────────
+document.querySelectorAll(".auth-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".auth-tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    const which = tab.dataset.auth;
+    document.getElementById("login-form").classList.toggle("hidden", which !== "login");
+    document.getElementById("signup-form").classList.toggle("hidden", which !== "signup");
   });
 });
 
+// ── Sign Up ──────────────────────────────────────────────────────
+document.getElementById("signup-btn").addEventListener("click", async () => {
+  const email = document.getElementById("signup-email").value.trim();
+  const password = document.getElementById("signup-password").value;
+  const username = document.getElementById("signup-username").value.trim();
+  const errorEl = document.getElementById("signup-error");
+
+  errorEl.classList.remove("show");
+
+  if (!email || !password || !username) {
+    errorEl.textContent = "Please fill in all fields.";
+    errorEl.classList.add("show");
+    return;
+  }
+
+  if (password.length < 6) {
+    errorEl.textContent = "Password must be at least 6 characters.";
+    errorEl.classList.add("show");
+    return;
+  }
+
+  const btn = document.getElementById("signup-btn");
+  btn.textContent = "Creating...";
+  btn.disabled = true;
+
+  const { data, error } = await sb.auth.signUp({ email, password });
+
+  if (error) {
+    errorEl.textContent = error.message;
+    errorEl.classList.add("show");
+    btn.textContent = "Create Account";
+    btn.disabled = false;
+    return;
+  }
+
+  // Save username to profiles table
+  await sb.from("profiles").upsert({
+    user_id: data.user.id,
+    username
+  });
+
+  btn.textContent = "Create Account";
+  btn.disabled = false;
+});
+
+// ── Log In ───────────────────────────────────────────────────────
+document.getElementById("login-btn").addEventListener("click", async () => {
+  const email = document.getElementById("login-email").value.trim();
+  const password = document.getElementById("login-password").value;
+  const errorEl = document.getElementById("login-error");
+
+  errorEl.classList.remove("show");
+
+  if (!email || !password) {
+    errorEl.textContent = "Please enter your email and password.";
+    errorEl.classList.add("show");
+    return;
+  }
+
+  const btn = document.getElementById("login-btn");
+  btn.textContent = "Logging in...";
+  btn.disabled = true;
+
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    errorEl.textContent = "Incorrect email or password.";
+    errorEl.classList.add("show");
+    btn.textContent = "Log In";
+    btn.disabled = false;
+    return;
+  }
+
+  btn.textContent = "Log In";
+  btn.disabled = false;
+});
+
+// ── Log Out ──────────────────────────────────────────────────────
 document.getElementById("logout-btn").addEventListener("click", async () => {
   await sb.auth.signOut();
   location.reload();
 });
 
-sb.auth.onAuthStateChange((_event, session) => {
+// ── Auth State ───────────────────────────────────────────────────
+sb.auth.onAuthStateChange(async (_event, session) => {
   if (session?.user) {
     currentUser = session.user;
-    showApp();
+    await showApp();
   } else {
     currentUser = null;
     document.getElementById("auth-screen").style.display = "flex";
@@ -34,18 +116,72 @@ sb.auth.onAuthStateChange((_event, session) => {
   }
 });
 
-function showApp() {
+async function showApp() {
   document.getElementById("auth-screen").style.display = "none";
   document.getElementById("app").style.display = "block";
 
-  const meta = currentUser.user_metadata;
-  document.getElementById("user-name").textContent = meta.full_name || meta.name || "";
-  const avatar = document.getElementById("user-avatar");
-  if (meta.avatar_url || meta.picture) {
-    avatar.src = meta.avatar_url || meta.picture;
-  } else {
-    avatar.style.display = "none";
+  // Load profile
+  const { data: profile } = await sb
+    .from("profiles")
+    .select("*")
+    .eq("user_id", currentUser.id)
+    .single();
+
+  const displayName = profile?.username || currentUser.email.split("@")[0];
+  document.getElementById("user-name").textContent = displayName;
+
+  if (profile?.avatar_url) {
+    const avatar = document.getElementById("user-avatar");
+    avatar.src = profile.avatar_url;
+    avatar.style.display = "block";
   }
+
+  // Pre-fill profile form
+  if (profile) {
+    document.getElementById("profile-username").value = profile.username || "";
+    document.getElementById("profile-bio").value = profile.bio || "";
+    document.getElementById("profile-genres").value = profile.genres || "";
+    document.getElementById("profile-avatar-url").value = profile.avatar_url || "";
+    if (profile.avatar_url) {
+      document.getElementById("profile-avatar-preview").src = profile.avatar_url;
+    }
+  }
+}
+
+// ── Profile Avatar Preview ────────────────────────────────────────
+document.getElementById("profile-avatar-url").addEventListener("input", (e) => {
+  const url = e.target.value.trim();
+  if (url) document.getElementById("profile-avatar-preview").src = url;
+});
+
+// ── Save Profile ─────────────────────────────────────────────────
+async function saveProfile() {
+  if (!currentUser) return;
+
+  const username = document.getElementById("profile-username").value.trim();
+  const bio = document.getElementById("profile-bio").value.trim();
+  const genres = document.getElementById("profile-genres").value.trim();
+  const avatar_url = document.getElementById("profile-avatar-url").value.trim();
+
+  await sb.from("profiles").upsert({
+    user_id: currentUser.id,
+    username,
+    bio,
+    genres,
+    avatar_url
+  });
+
+  // Update header name and avatar
+  document.getElementById("user-name").textContent = username || currentUser.email.split("@")[0];
+  const headerAvatar = document.getElementById("user-avatar");
+  if (avatar_url) {
+    headerAvatar.src = avatar_url;
+    headerAvatar.style.display = "block";
+  }
+
+  const badge = document.getElementById("profile-saved");
+  badge.classList.add("show");
+  setTimeout(() => badge.classList.remove("show"), 2000);
 }
 
 // ── Tabs ─────────────────────────────────────────────────────────
@@ -55,10 +191,7 @@ document.querySelectorAll(".tab").forEach(tab => {
     document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
     tab.classList.add("active");
     document.getElementById(tab.dataset.tab + "-panel").classList.add("active");
-
     if (tab.dataset.tab === "library") loadLibrary();
-
-    // Hide track panel when switching tabs
     document.getElementById("track-panel").classList.remove("open");
   });
 });
@@ -94,7 +227,6 @@ document.getElementById("search").addEventListener("keypress", async (e) => {
 
 // ── Load Album ───────────────────────────────────────────────────
 async function loadAlbum(spotifyAlbum) {
-  // Fetch full album details for genres + release date
   const res = await fetch(`/api/album?id=${spotifyAlbum.id}`);
   const full = await res.json();
 
@@ -107,14 +239,12 @@ async function loadAlbum(spotifyAlbum) {
     genres: (full.genres || []).join(", ")
   };
 
-  // Fill header
   document.getElementById("tp-cover").src = currentAlbum.cover;
   document.getElementById("tp-name").textContent = currentAlbum.name;
   document.getElementById("tp-artist").textContent = currentAlbum.artist;
   document.getElementById("tp-details").textContent =
     [currentAlbum.release_date, currentAlbum.genres].filter(Boolean).join(" · ");
 
-  // Load saved album data from Supabase
   const { data: saved } = await sb
     .from("albums")
     .select("rating, thoughts")
@@ -125,7 +255,6 @@ async function loadAlbum(spotifyAlbum) {
   renderStars(saved?.rating || 0);
   document.getElementById("album-thoughts").value = saved?.thoughts || "";
 
-  // Load tracks
   const tracksRes = await fetch(`/api/tracks?id=${spotifyAlbum.id}`);
   const tracksData = await tracksRes.json();
   renderTracks(tracksData.items || []);
@@ -145,14 +274,11 @@ function renderStars(selected) {
     star.addEventListener("click", () => {
       container.dataset.rating = i;
       highlightStars(i);
-      // autosave rating immediately
       autoSaveAlbum();
     });
     star.addEventListener("mouseover", () => highlightStars(i));
     star.addEventListener("mouseout", () => {
-      // restore actual saved state
-      const current = parseInt(container.dataset.rating || "0");
-      highlightStars(current);
+      highlightStars(parseInt(container.dataset.rating || "0"));
     });
     container.appendChild(star);
   }
@@ -165,13 +291,11 @@ function highlightStars(n) {
   });
 }
 
-// ── Auto Save Album (silent, no button feedback) ──────────────────
+// ── Auto Save Album ───────────────────────────────────────────────
 async function autoSaveAlbum() {
   if (!currentAlbum || !currentUser) return;
   const rating = parseInt(document.getElementById("album-stars").dataset.rating || "0");
   const thoughts = document.getElementById("album-thoughts").value.trim();
-
-  // Only save if the user has actually added something
   if (!rating && !thoughts) return;
 
   await sb.from("albums").upsert({
@@ -187,11 +311,13 @@ async function autoSaveAlbum() {
   }, { onConflict: "id,user_id" });
 }
 
-// Album thoughts autosave (debounced)
+// Album thoughts autosave
 document.getElementById("album-thoughts").addEventListener("input", () => {
   clearTimeout(saveThoughtsTimer);
   saveThoughtsTimer = setTimeout(() => autoSaveAlbum(), 800);
 });
+
+// ── Save Everything ───────────────────────────────────────────────
 async function saveAll() {
   if (!currentAlbum || !currentUser) return;
 
@@ -202,7 +328,6 @@ async function saveAll() {
   const rating = parseInt(document.getElementById("album-stars").dataset.rating || "0");
   const thoughts = document.getElementById("album-thoughts").value.trim();
 
-  // Only save album if user added a rating or thoughts
   if (rating || thoughts) {
     await sb.from("albums").upsert({
       id: currentAlbum.id,
@@ -217,20 +342,16 @@ async function saveAll() {
     }, { onConflict: "id,user_id" });
   }
 
-  // Save all track reviews
   const trackItems = document.querySelectorAll(".track-item");
   const upserts = [];
   trackItems.forEach(item => {
-    const trackId = item.dataset.trackId;
-    const trackNum = parseInt(item.dataset.trackNum);
-    const trackName = item.dataset.trackName;
     const review = item.querySelector("textarea").value;
     upserts.push({
-      id: trackId,
+      id: item.dataset.trackId,
       user_id: currentUser.id,
       album_id: currentAlbum.id,
-      name: trackName,
-      track_number: trackNum,
+      name: item.dataset.trackName,
+      track_number: parseInt(item.dataset.trackNum),
       review
     });
   });
@@ -243,21 +364,18 @@ async function saveAll() {
   btn.style.borderColor = "var(--saved)";
   btn.style.color = "var(--saved)";
   setTimeout(() => {
-    btn.textContent = "Save";
+    btn.textContent = "Save Everything";
     btn.style.borderColor = "";
     btn.style.color = "";
     btn.disabled = false;
   }, 2000);
 }
 
-
-
 // ── Render Tracks ────────────────────────────────────────────────
 async function renderTracks(tracks) {
   const list = document.getElementById("tracks-list");
   list.innerHTML = "";
 
-  // Fetch all saved track reviews for this album at once
   const { data: savedReviews } = await sb
     .from("tracks")
     .select("id, review")
@@ -284,7 +402,6 @@ async function renderTracks(tracks) {
 
     const textarea = item.querySelector("textarea");
     let trackTimer = null;
-
     textarea.addEventListener("input", () => {
       clearTimeout(trackTimer);
       trackTimer = setTimeout(async () => {
@@ -315,7 +432,7 @@ async function loadLibrary() {
     .order("name");
 
   if (!albums || albums.length === 0) {
-    container.innerHTML = "<p id='library-empty' style='color:#555;font-size:14px;letter-spacing:1px'>No albums saved yet. Rate or review an album to add it here.</p>";
+    container.innerHTML = "<p style='color:#555;font-size:14px;letter-spacing:1px'>No albums saved yet. Rate or review an album to add it here.</p>";
     return;
   }
 
@@ -341,21 +458,17 @@ async function loadLibrary() {
       <button class="delete-btn" title="Remove from library">✕</button>
     `;
 
-    // Delete button
     card.querySelector(".delete-btn").addEventListener("click", async (e) => {
-      e.stopPropagation(); // don't open the album
+      e.stopPropagation();
       if (!confirm(`Remove "${album.name}" from your library?`)) return;
       await sb.from("tracks").delete().eq("album_id", album.id).eq("user_id", currentUser.id);
       await sb.from("albums").delete().eq("id", album.id).eq("user_id", currentUser.id);
       card.remove();
-      // Show empty state if no cards left
       if (!document.querySelector(".library-card")) {
-        document.getElementById("library-content").innerHTML =
-          "<p style='color:#555;font-size:14px;letter-spacing:1px'>No albums saved yet. Rate or review an album to add it here.</p>";
+        container.innerHTML = "<p style='color:#555;font-size:14px;letter-spacing:1px'>No albums saved yet. Rate or review an album to add it here.</p>";
       }
     });
 
-    // Click card to open album
     card.addEventListener("click", () => {
       document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
       document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));

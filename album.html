@@ -294,7 +294,7 @@
       // Get album ID from URL
       const albumId = new URLSearchParams(window.location.search).get("id");
 
-      sb.auth.onAuthStateChange(async (_event, session) => {
+      sb.auth.getSession().then(async ({ data: { session } }) => {
         if (session?.user) {
           currentUser = session.user;
           if (albumId) {
@@ -305,6 +305,18 @@
         } else {
           document.getElementById("loading-page").style.display = "none";
           document.getElementById("not-logged-in").style.display = "flex";
+        }
+      });
+
+      sb.auth.onAuthStateChange(async (_event, session) => {
+        if (_event === "INITIAL_SESSION") return;
+        if (session?.user) {
+          currentUser = session.user;
+          if (albumId && !document.getElementById("album-page").style.display === "block") {
+            await loadAlbumPage(albumId);
+          }
+        } else {
+          window.location.href = "index.html";
         }
       });
 

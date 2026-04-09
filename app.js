@@ -238,7 +238,9 @@ document.getElementById("search").addEventListener("keypress", async (e) => {
       <div class="album-name">${album.name}</div>
       <div class="album-artist">${album.artists[0]?.name || ""}</div>
     `;
-    card.addEventListener("click", () => loadAlbum(album));
+    card.addEventListener("click", () => {
+      window.location.href = `album.html?id=${album.id}`;
+    });
     resultsDiv.appendChild(card);
   });
 });
@@ -488,11 +490,7 @@ async function loadLibrary() {
     });
 
     card.addEventListener("click", () => {
-      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-      document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
-      document.querySelector('[data-tab="search"]').classList.add("active");
-      document.getElementById("search-panel").classList.add("active");
-      loadAlbum({ id: album.id, name: album.name, artists: [{ name: album.artist }], images: [{ url: album.cover }] });
+      window.location.href = `album.html?id=${album.id}`;
     });
 
     container.appendChild(card);

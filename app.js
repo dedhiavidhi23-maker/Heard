@@ -10,6 +10,18 @@ let currentUser = null;
 let currentAlbum = null;
 let saveThoughtsTimer = null;
 
+// ── Toggle Password Visibility ───────────────────────────────────
+function togglePw(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (input.type === "password") {
+    input.type = "text";
+    btn.textContent = "Hide";
+  } else {
+    input.type = "password";
+    btn.textContent = "Show";
+  }
+}
+
 // ── Auth Tabs ────────────────────────────────────────────────────
 document.querySelectorAll(".auth-tab").forEach(tab => {
   tab.addEventListener("click", () => {

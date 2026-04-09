@@ -119,7 +119,20 @@ document.getElementById("logout-btn").addEventListener("click", async () => {
 });
 
 // ── Auth State ───────────────────────────────────────────────────
+// First check if there's already a session (handles page refresh)
+sb.auth.getSession().then(async ({ data: { session } }) => {
+  if (session?.user) {
+    currentUser = session.user;
+    await showApp();
+  } else {
+    document.getElementById("auth-screen").style.display = "flex";
+    document.getElementById("app").style.display = "none";
+  }
+});
+
+// Then listen for future changes (login, logout)
 sb.auth.onAuthStateChange(async (_event, session) => {
+  if (_event === "INITIAL_SESSION") return; // already handled above
   if (session?.user) {
     currentUser = session.user;
     await showApp();

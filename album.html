@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>HEARD</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --bg: #0a0a0a;
+        --surface: #141414;
+        --border: #222;
+        --accent: #e8ff47;
+        --text: #f0f0f0;
+        --muted: #555;
+        --saved: #4ade80;
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: 'DM Sans', sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 24px 40px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      header h1 {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 36px;
+        letter-spacing: 6px;
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      header a {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 36px;
+        letter-spacing: 6px;
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      #back-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        padding: 8px 16px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 12px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        transition: border-color 0.2s, color 0.2s;
+      }
+
+      #back-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+      #loading-page {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 60vh;
+        color: var(--muted);
+        font-size: 13px;
+        letter-spacing: 2px;
+      }
+
+      #album-page { display: none; padding: 48px 40px; max-width: 900px; }
+
+      /* ALBUM HERO */
+      .album-hero {
+        display: flex;
+        gap: 40px;
+        margin-bottom: 48px;
+        align-items: flex-start;
+      }
+
+      .album-hero img {
+        width: 220px;
+        height: 220px;
+        object-fit: cover;
+        border-radius: 6px;
+        flex-shrink: 0;
+        display: block;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      }
+
+      .album-hero-info { flex: 1; }
+
+      .album-hero-info h1 {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 48px;
+        letter-spacing: 3px;
+        line-height: 1;
+        margin-bottom: 8px;
+      }
+
+      .hero-artist {
+        font-size: 16px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+
+      .hero-meta {
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 24px;
+        letter-spacing: 1px;
+      }
+
+      /* STARS */
+      .stars { display: flex; gap: 6px; margin-bottom: 16px; }
+
+      .star {
+        font-size: 26px;
+        cursor: pointer;
+        color: var(--border);
+        transition: color 0.15s;
+        line-height: 1;
+      }
+
+      .star.filled { color: var(--accent); }
+
+      /* THOUGHTS */
+      #album-thoughts {
+        width: 100%;
+        max-width: 480px;
+        height: 80px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 13px;
+        padding: 10px 12px;
+        resize: none;
+        outline: none;
+        transition: border-color 0.2s;
+        display: block;
+        margin-bottom: 16px;
+      }
+
+      #album-thoughts:focus { border-color: var(--accent); }
+      #album-thoughts::placeholder { color: var(--muted); }
+
+      #save-btn {
+        padding: 12px 36px;
+        background: none;
+        border: 1px solid var(--accent);
+        color: var(--accent);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 12px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        cursor: pointer;
+        border-radius: 3px;
+        transition: background 0.2s, color 0.2s;
+      }
+
+      #save-btn:hover:not(:disabled) { background: var(--accent); color: #000; }
+      #save-btn:disabled { opacity: 0.6; cursor: default; }
+
+      /* TRACKS */
+      .tracks-section h2 {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 22px;
+        letter-spacing: 3px;
+        color: var(--muted);
+        margin-bottom: 16px;
+      }
+
+      .track-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        padding: 18px 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .track-num {
+        color: var(--muted);
+        font-size: 12px;
+        width: 24px;
+        flex-shrink: 0;
+        padding-top: 3px;
+        text-align: right;
+      }
+
+      .track-info { flex: 1; }
+
+      .track-name {
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 10px;
+      }
+
+      .track-textarea {
+        width: 100%;
+        max-width: 520px;
+        height: 60px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 13px;
+        padding: 8px 12px;
+        resize: none;
+        outline: none;
+        transition: border-color 0.2s;
+        display: block;
+      }
+
+      .track-textarea:focus { border-color: var(--accent); }
+      .track-textarea::placeholder { color: var(--muted); }
+
+      /* NOT LOGGED IN */
+      #not-logged-in {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 60vh;
+        gap: 16px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      #not-logged-in a {
+        color: var(--accent);
+        text-decoration: none;
+        font-size: 13px;
+        letter-spacing: 1px;
+        border-bottom: 1px solid var(--accent);
+        padding-bottom: 2px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <a href="index.html">HEARD</a>
+      <button id="back-btn" onclick="history.back()">← Back</button>
+    </header>
+
+    <div id="loading-page">Loading...</div>
+    <div id="not-logged-in">
+      <p>You need to be logged in to view this page.</p>
+      <a href="index.html">Go to login →</a>
+    </div>
+
+    <div id="album-page">
+      <div class="album-hero">
+        <img id="cover" src="" alt="" />
+        <div class="album-hero-info">
+          <h1 id="album-name"></h1>
+          <div class="hero-artist" id="album-artist"></div>
+          <div class="hero-meta" id="album-meta"></div>
+          <div class="stars" id="album-stars"></div>
+          <textarea id="album-thoughts" placeholder="Your thoughts on this album..."></textarea>
+          <button id="save-btn" onclick="saveAll()">Save Everything</button>
+        </div>
+      </div>
+
+      <div class="tracks-section">
+        <h2>Tracks</h2>
+        <div id="tracks-list"></div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+      const { createClient } = supabase;
+      const sb = createClient(
+        "https://jexqbnpxnikmdoiwnomf.supabase.co",
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpleHFibnB4bmlrbWRvaXdub21mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzNzc3ODEsImV4cCI6MjA4Nzk1Mzc4MX0.ThdnnZ4yUrOP025ygVEuJxZSIQVmgtcjGi7-hO5s3NM"
+      );
+
+      let currentUser = null;
+      let currentAlbum = null;
+      let saveThoughtsTimer = null;
+
+      // Get album ID from URL
+      const albumId = new URLSearchParams(window.location.search).get("id");
+
+      sb.auth.onAuthStateChange(async (_event, session) => {
+        if (session?.user) {
+          currentUser = session.user;
+          if (albumId) {
+            await loadAlbumPage(albumId);
+          } else {
+            window.location.href = "index.html";
+          }
+        } else {
+          document.getElementById("loading-page").style.display = "none";
+          document.getElementById("not-logged-in").style.display = "flex";
+        }
+      });
+
+      async function loadAlbumPage(id) {
+        document.getElementById("loading-page").style.display = "flex";
+
+        // Fetch album details from Spotify
+        const [albumRes, tracksRes] = await Promise.all([
+          fetch(`/api/album?id=${id}`),
+          fetch(`/api/tracks?id=${id}`)
+        ]);
+
+        const albumData = await albumRes.json();
+        const tracksData = await tracksRes.json();
+
+        currentAlbum = {
+          id,
+          name: albumData.name,
+          artist: albumData.artists?.[0]?.name || "",
+          cover: albumData.images?.[0]?.url || "",
+          release_date: albumData.release_date || "",
+          genres: (albumData.genres || []).join(", ")
+        };
+
+        // Fill in hero
+        document.getElementById("cover").src = currentAlbum.cover;
+        document.getElementById("album-name").textContent = currentAlbum.name;
+        document.getElementById("album-artist").textContent = currentAlbum.artist;
+        document.getElementById("album-meta").textContent =
+          [currentAlbum.release_date, currentAlbum.genres].filter(Boolean).join(" · ");
+        document.title = `${currentAlbum.name} — HEARD`;
+
+        // Load saved album data
+        const { data: saved } = await sb
+          .from("albums")
+          .select("rating, thoughts")
+          .eq("id", id)
+          .eq("user_id", currentUser.id)
+          .single();
+
+        renderStars(saved?.rating || 0);
+        document.getElementById("album-thoughts").value = saved?.thoughts || "";
+
+        // Load saved track reviews
+        const { data: savedReviews } = await sb
+          .from("tracks")
+          .select("id, review")
+          .eq("album_id", id)
+          .eq("user_id", currentUser.id);
+
+        const reviewMap = {};
+        (savedReviews || []).forEach(r => { reviewMap[r.id] = r.review; });
+
+        // Render tracks
+        const list = document.getElementById("tracks-list");
+        (tracksData.items || []).forEach(track => {
+          const item = document.createElement("div");
+          item.className = "track-item";
+          item.dataset.trackId = track.id;
+          item.dataset.trackNum = track.track_number;
+          item.dataset.trackName = track.name;
+
+          item.innerHTML = `
+            <div class="track-num">${track.track_number}</div>
+            <div class="track-info">
+              <div class="track-name">${track.name}</div>
+              <textarea class="track-textarea" placeholder="Your thoughts on this track...">${reviewMap[track.id] || ""}</textarea>
+            </div>
+          `;
+
+          // Autosave track review
+          const textarea = item.querySelector("textarea");
+          let trackTimer = null;
+          textarea.addEventListener("input", () => {
+            clearTimeout(trackTimer);
+            trackTimer = setTimeout(async () => {
+              await sb.from("tracks").upsert({
+                id: track.id,
+                user_id: currentUser.id,
+                album_id: currentAlbum.id,
+                name: track.name,
+                track_number: track.track_number,
+                review: textarea.value
+              }, { onConflict: "id,user_id" });
+            }, 800);
+          });
+
+          list.appendChild(item);
+        });
+
+        document.getElementById("loading-page").style.display = "none";
+        document.getElementById("album-page").style.display = "block";
+
+        // Autosave album thoughts
+        document.getElementById("album-thoughts").addEventListener("input", () => {
+          clearTimeout(saveThoughtsTimer);
+          saveThoughtsTimer = setTimeout(() => autoSaveAlbum(), 800);
+        });
+      }
+
+      // ── Stars ──────────────────────────────────────────────────
+      function renderStars(selected) {
+        const container = document.getElementById("album-stars");
+        container.innerHTML = "";
+        for (let i = 1; i <= 5; i++) {
+          const star = document.createElement("span");
+          star.className = "star" + (i <= selected ? " filled" : "");
+          star.textContent = "★";
+          star.addEventListener("click", () => {
+            container.dataset.rating = i;
+            highlightStars(i);
+            autoSaveAlbum();
+          });
+          star.addEventListener("mouseover", () => highlightStars(i));
+          star.addEventListener("mouseout", () => {
+            highlightStars(parseInt(container.dataset.rating || "0"));
+          });
+          container.appendChild(star);
+        }
+        container.dataset.rating = selected;
+      }
+
+      function highlightStars(n) {
+        document.querySelectorAll("#album-stars .star").forEach((s, i) => {
+          s.classList.toggle("filled", i < n);
+        });
+      }
+
+      // ── Auto Save ──────────────────────────────────────────────
+      async function autoSaveAlbum() {
+        if (!currentAlbum || !currentUser) return;
+        const rating = parseInt(document.getElementById("album-stars").dataset.rating || "0");
+        const thoughts = document.getElementById("album-thoughts").value.trim();
+        if (!rating && !thoughts) return;
+
+        await sb.from("albums").upsert({
+          id: currentAlbum.id,
+          user_id: currentUser.id,
+          name: currentAlbum.name,
+          artist: currentAlbum.artist,
+          cover: currentAlbum.cover,
+          release_date: currentAlbum.release_date,
+          genres: currentAlbum.genres,
+          rating,
+          thoughts
+        }, { onConflict: "id,user_id" });
+      }
+
+      // ── Save All ───────────────────────────────────────────────
+      async function saveAll() {
+        if (!currentAlbum || !currentUser) return;
+
+        const btn = document.getElementById("save-btn");
+        btn.textContent = "Saving...";
+        btn.disabled = true;
+
+        const rating = parseInt(document.getElementById("album-stars").dataset.rating || "0");
+        const thoughts = document.getElementById("album-thoughts").value.trim();
+
+        if (rating || thoughts) {
+          await sb.from("albums").upsert({
+            id: currentAlbum.id,
+            user_id: currentUser.id,
+            name: currentAlbum.name,
+            artist: currentAlbum.artist,
+            cover: currentAlbum.cover,
+            release_date: currentAlbum.release_date,
+            genres: currentAlbum.genres,
+            rating,
+            thoughts
+          }, { onConflict: "id,user_id" });
+        }
+
+        const trackItems = document.querySelectorAll(".track-item");
+        const upserts = [];
+        trackItems.forEach(item => {
+          upserts.push({
+            id: item.dataset.trackId,
+            user_id: currentUser.id,
+            album_id: currentAlbum.id,
+            name: item.dataset.trackName,
+            track_number: parseInt(item.dataset.trackNum),
+            review: item.querySelector("textarea").value
+          });
+        });
+
+        if (upserts.length > 0) {
+          await sb.from("tracks").upsert(upserts, { onConflict: "id,user_id" });
+        }
+
+        btn.textContent = "Saved ✓";
+        btn.style.borderColor = "var(--saved)";
+        btn.style.color = "var(--saved)";
+        setTimeout(() => {
+          btn.textContent = "Save Everything";
+          btn.style.borderColor = "";
+          btn.style.color = "";
+          btn.disabled = false;
+        }, 2000);
+      }
+    </script>
+  </body>
+</html>

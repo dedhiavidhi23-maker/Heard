@@ -115,7 +115,7 @@ document.getElementById("login-btn").addEventListener("click", async () => {
 // ── Log Out ──────────────────────────────────────────────────────
 document.getElementById("logout-btn").addEventListener("click", async () => {
   await sb.auth.signOut();
-  location.reload();
+  window.location.href = window.location.pathname;
 });
 
 // ── Auth State ───────────────────────────────────────────────────
@@ -130,13 +130,12 @@ sb.auth.getSession().then(async ({ data: { session } }) => {
   }
 });
 
-// Then listen for future changes (login, logout)
+// Listen for sign in / sign out only
 sb.auth.onAuthStateChange(async (_event, session) => {
-  if (_event === "INITIAL_SESSION") return; // already handled above
-  if (session?.user) {
+  if (_event === "SIGNED_IN" && !currentUser) {
     currentUser = session.user;
     await showApp();
-  } else {
+  } else if (_event === "SIGNED_OUT") {
     currentUser = null;
     document.getElementById("auth-screen").style.display = "flex";
     document.getElementById("app").style.display = "none";

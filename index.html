@@ -129,6 +129,30 @@
 
       .auth-error.show { display: block; }
 
+      .password-wrap {
+        position: relative;
+        display: flex;
+        align-items: center;
+      }
+
+      .password-wrap .auth-input {
+        padding-right: 56px;
+      }
+
+      .show-pw {
+        position: absolute;
+        right: 12px;
+        font-size: 11px;
+        letter-spacing: 1px;
+        color: var(--muted);
+        cursor: pointer;
+        text-transform: uppercase;
+        user-select: none;
+        transition: color 0.2s;
+      }
+
+      .show-pw:hover { color: var(--accent); }
+
       /* MAIN APP */
       #app { display: none; }
 
@@ -523,7 +547,10 @@
         <!-- LOGIN FORM -->
         <div class="auth-form" id="login-form">
           <input class="auth-input" id="login-email" type="email" placeholder="Email" />
-          <input class="auth-input" id="login-password" type="password" placeholder="Password" />
+          <div class="password-wrap">
+            <input class="auth-input" id="login-password" type="password" placeholder="Password" />
+            <span class="show-pw" onclick="togglePw('login-password', this)">Show</span>
+          </div>
           <span class="auth-error" id="login-error"></span>
           <button class="auth-btn" id="login-btn">Log In</button>
         </div>
@@ -531,7 +558,10 @@
         <!-- SIGNUP FORM -->
         <div class="auth-form hidden" id="signup-form">
           <input class="auth-input" id="signup-email" type="email" placeholder="Email" />
-          <input class="auth-input" id="signup-password" type="password" placeholder="Password (min 6 characters)" />
+          <div class="password-wrap">
+            <input class="auth-input" id="signup-password" type="password" placeholder="Password (min 6 characters)" />
+            <span class="show-pw" onclick="togglePw('signup-password', this)">Show</span>
+          </div>
           <input class="auth-input" id="signup-username" type="text" placeholder="Username (shown to others)" />
           <span class="auth-error" id="signup-error"></span>
           <button class="auth-btn" id="signup-btn">Create Account</button>

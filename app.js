@@ -146,35 +146,40 @@ async function showApp() {
   document.getElementById("auth-screen").style.display = "none";
   document.getElementById("app").style.display = "block";
 
-  // Retry a couple times in case profile isn't saved yet
-  let profile = null;
-  for (let i = 0; i < 3; i++) {
-    const { data } = await sb
+  // Show email as fallback name immediately so UI isn't blank
+  const fallback = currentUser.email.split("@")[0];
+  document.getElementById("user-name").textContent = fallback;
+
+  // Load profile in background — don't block the UI
+  try {
+    const { data: profile } = await sb
       .from("profiles")
       .select("*")
       .eq("user_id", currentUser.id)
       .single();
-    if (data?.username) { profile = data; break; }
-    await new Promise(r => setTimeout(r, 500));
-  }
 
-  const displayName = profile?.username || currentUser.email.split("@")[0];
-  document.getElementById("user-name").textContent = displayName;
-
-  if (profile?.avatar_url) {
-    const avatar = document.getElementById("user-avatar");
-    avatar.src = profile.avatar_url;
-    avatar.style.display = "block";
-  }
-
-  if (profile) {
-    document.getElementById("profile-username").value = profile.username || "";
-    document.getElementById("profile-bio").value = profile.bio || "";
-    document.getElementById("profile-genres").value = profile.genres || "";
-    document.getElementById("profile-avatar-url").value = profile.avatar_url || "";
-    if (profile.avatar_url) {
-      document.getElementById("profile-avatar-preview").src = profile.avatar_url;
+    if (profile?.username) {
+      document.getElementById("user-name").textContent = profile.username;
     }
+
+    if (profile?.avatar_url) {
+      const avatar = document.getElementById("user-avatar");
+      avatar.src = profile.avatar_url;
+      avatar.style.display = "block";
+    }
+
+    if (profile) {
+      document.getElementById("profile-username").value = profile.username || "";
+      document.getElementById("profile-bio").value = profile.bio || "";
+      document.getElementById("profile-genres").value = profile.genres || "";
+      document.getElementById("profile-avatar-url").value = profile.avatar_url || "";
+      if (profile.avatar_url) {
+        document.getElementById("profile-avatar-preview").src = profile.avatar_url;
+      }
+    }
+  } catch (e) {
+    // Profile load failed silently — fallback name already shown
+    console.log("Profile load failed:", e);
   }
 }
 

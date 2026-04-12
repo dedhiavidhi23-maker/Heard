@@ -106,16 +106,45 @@ document.getElementById("logout-btn").addEventListener("click", async () => {
 });
 
 // ── Session Handling ──────────────────────────────────────────────
-// Use onAuthStateChange only — it reliably fires on both fresh load and refresh
+let authInitialized = false;
+
 sb.auth.onAuthStateChange(async (_event, session) => {
+  // Always hide loading spinner
   document.getElementById("init-loading").style.display = "none";
 
-  if (session?.user) {
+  if (!authInitialized) {
+    authInitialized = true;
+    // On first fire, trust whatever session state we get
+    if (session?.user) {
+      currentUser = session.user;
+      document.getElementById("auth-screen").style.display = "none";
+      document.getElementById("app").style.display = "block";
+      await loadProfile();
+    } else {
+      // No session — but wait 1 second before showing login
+      // in case Supabase fires SIGNED_OUT before TOKEN_REFRESHED
+      setTimeout(async () => {
+        const { data: { session: retrySession } } = await sb.auth.getSession();
+        if (retrySession?.user) {
+          currentUser = retrySession.user;
+          document.getElementById("auth-screen").style.display = "none";
+          document.getElementById("app").style.display = "block";
+          await loadProfile();
+        } else {
+          document.getElementById("auth-screen").style.display = "flex";
+        }
+      }, 800);
+    }
+    return;
+  }
+
+  // After init: only handle explicit sign in / sign out
+  if (_event === "SIGNED_IN") {
     currentUser = session.user;
     document.getElementById("auth-screen").style.display = "none";
     document.getElementById("app").style.display = "block";
     await loadProfile();
-  } else {
+  } else if (_event === "SIGNED_OUT") {
     currentUser = null;
     currentProfile = null;
     document.getElementById("app").style.display = "none";

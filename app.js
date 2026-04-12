@@ -146,7 +146,7 @@ document.getElementById("logout-btn").addEventListener("click", async () => {
 });
 
 sb.auth.onAuthStateChange(async (_event, session) => {
-  if (authInitialized) return; // ignore all events after first one
+  if (authInitialized) return;
   authInitialized = true;
   document.getElementById("init-loading").style.display = "none";
 
@@ -159,6 +159,15 @@ sb.auth.onAuthStateChange(async (_event, session) => {
     document.getElementById("auth-screen").style.display = "flex";
   }
 });
+
+// Fallback: if onAuthStateChange never fires within 3s, show login screen
+setTimeout(() => {
+  if (!authInitialized) {
+    authInitialized = true;
+    document.getElementById("init-loading").style.display = "none";
+    document.getElementById("auth-screen").style.display = "flex";
+  }
+}, 3000);
 
 // After login form succeeds, manually show app
 async function onLoginSuccess(user) {

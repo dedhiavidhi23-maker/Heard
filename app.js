@@ -63,6 +63,7 @@ document.getElementById("signup-btn").addEventListener("click", async () => {
 
   if (data.user) {
     await sb.from("profiles").upsert({ user_id: data.user.id, username, email });
+    await onLoginSuccess(data.user);
   }
 
   btn.textContent = "Create Account";
@@ -118,13 +119,15 @@ document.getElementById("login-btn").addEventListener("click", async () => {
     return;
   }
 
-  const { error } = await sb.auth.signInWithPassword({ email: profileWithEmail.email, password });
+  const { data, error } = await sb.auth.signInWithPassword({ email: profileWithEmail.email, password });
 
   if (error) {
     errorEl.textContent = "Incorrect password.";
     errorEl.classList.add("show");
     btn.textContent = "Log In";
     btn.disabled = false;
+  } else {
+    await onLoginSuccess(data.user);
   }
 });
 
@@ -133,50 +136,38 @@ let authInitialized = false;
 
 // ── Log Out ───────────────────────────────────────────────────────
 document.getElementById("logout-btn").addEventListener("click", async () => {
-  authInitialized = false;
+  authInitialized = true; // prevent re-login after signOut
   await sb.auth.signOut();
-  window.location.reload();
+  currentUser = null;
+  currentProfile = null;
+  document.getElementById("app").style.display = "none";
+  document.getElementById("init-loading").style.display = "none";
+  document.getElementById("auth-screen").style.display = "flex";
 });
 
 sb.auth.onAuthStateChange(async (_event, session) => {
-  // Always hide loading spinner
+  if (authInitialized) return; // ignore all events after first one
+  authInitialized = true;
   document.getElementById("init-loading").style.display = "none";
 
-  if (!authInitialized) {
-    authInitialized = true;
-    if (session?.user) {
-      currentUser = session.user;
-      await loadProfile();
-      document.getElementById("auth-screen").style.display = "none";
-      document.getElementById("app").style.display = "block";
-    } else {
-      setTimeout(async () => {
-        const { data: { session: retrySession } } = await sb.auth.getSession();
-        if (retrySession?.user) {
-          currentUser = retrySession.user;
-          await loadProfile();
-          document.getElementById("auth-screen").style.display = "none";
-          document.getElementById("app").style.display = "block";
-        } else {
-          document.getElementById("auth-screen").style.display = "flex";
-        }
-      }, 800);
-    }
-    return;
-  }
-
-  if (_event === "SIGNED_IN") {
+  if (session?.user) {
     currentUser = session.user;
     await loadProfile();
     document.getElementById("auth-screen").style.display = "none";
     document.getElementById("app").style.display = "block";
-  } else if (_event === "SIGNED_OUT") {
-    currentUser = null;
-    currentProfile = null;
-    document.getElementById("app").style.display = "none";
+  } else {
     document.getElementById("auth-screen").style.display = "flex";
   }
 });
+
+// After login form succeeds, manually show app
+async function onLoginSuccess(user) {
+  authInitialized = true;
+  currentUser = user;
+  await loadProfile();
+  document.getElementById("auth-screen").style.display = "none";
+  document.getElementById("app").style.display = "block";
+}
 
 // ── Load Profile ──────────────────────────────────────────────────
 async function loadProfile() {

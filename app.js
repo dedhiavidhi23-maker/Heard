@@ -1,28 +1,23 @@
-// ── Supabase setup ──────────────────────────────────────────────
+// ── Supabase ─────────────────────────────────────────────────────
 const { createClient } = supabase;
 const sb = createClient(
   "https://jexqbnpxnikmdoiwnomf.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpleHFibnB4bmlrbWRvaXdub21mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzNzc3ODEsImV4cCI6MjA4Nzk1Mzc4MX0.ThdnnZ4yUrOP025ygVEuJxZSIQVmgtcjGi7-hO5s3NM"
 );
 
-// ── State ────────────────────────────────────────────────────────
+// ── State ─────────────────────────────────────────────────────────
 let currentUser = null;
-let currentAlbum = null;
+let currentProfile = null;
 let saveThoughtsTimer = null;
 
-// ── Toggle Password Visibility ───────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────
 function togglePw(inputId, btn) {
   const input = document.getElementById(inputId);
-  if (input.type === "password") {
-    input.type = "text";
-    btn.textContent = "Hide";
-  } else {
-    input.type = "password";
-    btn.textContent = "Show";
-  }
+  input.type = input.type === "password" ? "text" : "password";
+  btn.textContent = input.type === "password" ? "Show" : "Hide";
 }
 
-// ── Auth Tabs ────────────────────────────────────────────────────
+// ── Auth Tabs ─────────────────────────────────────────────────────
 document.querySelectorAll(".auth-tab").forEach(tab => {
   tab.addEventListener("click", () => {
     document.querySelectorAll(".auth-tab").forEach(t => t.classList.remove("active"));
@@ -33,7 +28,7 @@ document.querySelectorAll(".auth-tab").forEach(tab => {
   });
 });
 
-// ── Sign Up ──────────────────────────────────────────────────────
+// ── Sign Up ───────────────────────────────────────────────────────
 document.getElementById("signup-btn").addEventListener("click", async () => {
   const email = document.getElementById("signup-email").value.trim();
   const password = document.getElementById("signup-password").value;
@@ -41,13 +36,11 @@ document.getElementById("signup-btn").addEventListener("click", async () => {
   const errorEl = document.getElementById("signup-error");
 
   errorEl.classList.remove("show");
-
   if (!email || !password || !username) {
     errorEl.textContent = "Please fill in all fields.";
     errorEl.classList.add("show");
     return;
   }
-
   if (password.length < 6) {
     errorEl.textContent = "Password must be at least 6 characters.";
     errorEl.classList.add("show");
@@ -68,26 +61,21 @@ document.getElementById("signup-btn").addEventListener("click", async () => {
     return;
   }
 
-  // Save username immediately using the user id
   if (data.user) {
-    await sb.from("profiles").upsert({
-      user_id: data.user.id,
-      username
-    });
+    await sb.from("profiles").upsert({ user_id: data.user.id, username });
   }
 
   btn.textContent = "Create Account";
   btn.disabled = false;
 });
 
-// ── Log In ───────────────────────────────────────────────────────
+// ── Log In ────────────────────────────────────────────────────────
 document.getElementById("login-btn").addEventListener("click", async () => {
   const email = document.getElementById("login-email").value.trim();
   const password = document.getElementById("login-password").value;
   const errorEl = document.getElementById("login-error");
 
   errorEl.classList.remove("show");
-
   if (!email || !password) {
     errorEl.textContent = "Please enter your email and password.";
     errorEl.classList.add("show");
@@ -105,91 +93,118 @@ document.getElementById("login-btn").addEventListener("click", async () => {
     errorEl.classList.add("show");
     btn.textContent = "Log In";
     btn.disabled = false;
-    return;
   }
-
-  btn.textContent = "Log In";
-  btn.disabled = false;
 });
 
-// ── Log Out ──────────────────────────────────────────────────────
+// ── Log Out ───────────────────────────────────────────────────────
 document.getElementById("logout-btn").addEventListener("click", async () => {
   await sb.auth.signOut();
-  window.location.href = window.location.pathname;
+  currentUser = null;
+  currentProfile = null;
+  document.getElementById("app").style.display = "none";
+  document.getElementById("auth-screen").style.display = "flex";
 });
 
-// ── Auth State ───────────────────────────────────────────────────
-sb.auth.getSession().then(async ({ data: { session } }) => {
+// ── Session Handling ──────────────────────────────────────────────
+// Use onAuthStateChange only — it reliably fires on both fresh load and refresh
+sb.auth.onAuthStateChange(async (_event, session) => {
   document.getElementById("init-loading").style.display = "none";
+
   if (session?.user) {
     currentUser = session.user;
-    await showApp();
-  } else {
-    document.getElementById("auth-screen").style.display = "flex";
-  }
-});
-
-sb.auth.onAuthStateChange(async (_event, session) => {
-  if (_event === "SIGNED_IN" && !currentUser) {
-    currentUser = session.user;
-    document.getElementById("init-loading").style.display = "none";
     document.getElementById("auth-screen").style.display = "none";
-    await showApp();
-  } else if (_event === "SIGNED_OUT") {
+    document.getElementById("app").style.display = "block";
+    await loadProfile();
+  } else {
     currentUser = null;
+    currentProfile = null;
     document.getElementById("app").style.display = "none";
     document.getElementById("auth-screen").style.display = "flex";
   }
 });
 
-async function showApp() {
-  document.getElementById("auth-screen").style.display = "none";
-  document.getElementById("app").style.display = "block";
+// ── Load Profile ──────────────────────────────────────────────────
+async function loadProfile() {
+  // Show fallback name immediately
+  document.getElementById("user-name").textContent = currentUser.email.split("@")[0];
 
-  // Show email as fallback name immediately so UI isn't blank
-  const fallback = currentUser.email.split("@")[0];
-  document.getElementById("user-name").textContent = fallback;
+  const { data: profile } = await sb
+    .from("profiles").select("*")
+    .eq("user_id", currentUser.id).single();
 
-  // Load profile in background — don't block the UI
-  try {
-    const { data: profile } = await sb
-      .from("profiles")
-      .select("*")
-      .eq("user_id", currentUser.id)
-      .single();
+  currentProfile = profile || null;
 
-    if (profile?.username) {
-      document.getElementById("user-name").textContent = profile.username;
-    }
+  const name = profile?.username || currentUser.email.split("@")[0];
+  document.getElementById("user-name").textContent = name;
 
-    if (profile?.avatar_url) {
-      const avatar = document.getElementById("user-avatar");
-      avatar.src = profile.avatar_url;
-      avatar.style.display = "block";
-    }
+  // Update header avatar
+  if (profile?.avatar_url) {
+    const av = document.getElementById("user-avatar");
+    av.src = profile.avatar_url;
+    av.style.display = "block";
+  }
 
-    if (profile) {
-      document.getElementById("profile-username").value = profile.username || "";
-      document.getElementById("profile-bio").value = profile.bio || "";
-      document.getElementById("profile-genres").value = profile.genres || "";
-      document.getElementById("profile-avatar-url").value = profile.avatar_url || "";
-      if (profile.avatar_url) {
-        document.getElementById("profile-avatar-preview").src = profile.avatar_url;
-      }
-    }
-  } catch (e) {
-    // Profile load failed silently — fallback name already shown
-    console.log("Profile load failed:", e);
+  // Update profile view
+  updateProfileView();
+}
+
+// ── Profile View Mode ─────────────────────────────────────────────
+function updateProfileView() {
+  const p = currentProfile;
+  const name = p?.username || currentUser.email.split("@")[0];
+
+  document.getElementById("profile-view-username").textContent = name;
+  document.getElementById("profile-view-bio").textContent = p?.bio || "";
+  document.getElementById("profile-view-genres").textContent = p?.genres || "";
+
+  const viewAvatar = document.getElementById("profile-view-avatar");
+  if (p?.avatar_url) {
+    viewAvatar.src = p.avatar_url;
+  } else {
+    viewAvatar.src = "";
+    viewAvatar.style.background = "var(--surface)";
+  }
+
+  // Load stats
+  loadProfileStats();
+
+  // Pre-fill edit form
+  if (p) {
+    document.getElementById("profile-username").value = p.username || "";
+    document.getElementById("profile-bio").value = p.bio || "";
+    document.getElementById("profile-genres").value = p.genres || "";
+    document.getElementById("profile-avatar-url").value = p.avatar_url || "";
+    if (p.avatar_url) document.getElementById("profile-avatar-preview").src = p.avatar_url;
   }
 }
 
-// ── Profile Avatar Preview ────────────────────────────────────────
+async function loadProfileStats() {
+  const { data: albums } = await sb
+    .from("albums").select("id").eq("user_id", currentUser.id);
+  const { data: reviews } = await sb
+    .from("tracks").select("id").eq("user_id", currentUser.id).neq("review", "");
+
+  document.getElementById("stat-albums").textContent = albums?.length || 0;
+  document.getElementById("stat-reviews").textContent = reviews?.length || 0;
+}
+
+function showEditProfile() {
+  document.getElementById("profile-view").style.display = "none";
+  document.getElementById("profile-edit").style.display = "block";
+}
+
+function showViewProfile() {
+  document.getElementById("profile-edit").style.display = "none";
+  document.getElementById("profile-view").style.display = "block";
+}
+
+// Avatar preview in edit mode
 document.getElementById("profile-avatar-url").addEventListener("input", (e) => {
   const url = e.target.value.trim();
   if (url) document.getElementById("profile-avatar-preview").src = url;
 });
 
-// ── Save Profile ─────────────────────────────────────────────────
+// ── Save Profile ──────────────────────────────────────────────────
 async function saveProfile() {
   if (!currentUser) return;
 
@@ -198,28 +213,29 @@ async function saveProfile() {
   const genres = document.getElementById("profile-genres").value.trim();
   const avatar_url = document.getElementById("profile-avatar-url").value.trim();
 
-  await sb.from("profiles").upsert({
-    user_id: currentUser.id,
-    username,
-    bio,
-    genres,
-    avatar_url
-  });
+  await sb.from("profiles").upsert({ user_id: currentUser.id, username, bio, genres, avatar_url });
 
-  // Update header name and avatar
+  currentProfile = { user_id: currentUser.id, username, bio, genres, avatar_url };
+
+  // Update header
   document.getElementById("user-name").textContent = username || currentUser.email.split("@")[0];
-  const headerAvatar = document.getElementById("user-avatar");
   if (avatar_url) {
-    headerAvatar.src = avatar_url;
-    headerAvatar.style.display = "block";
+    const av = document.getElementById("user-avatar");
+    av.src = avatar_url;
+    av.style.display = "block";
   }
 
+  // Show saved badge then switch back to view
   const badge = document.getElementById("profile-saved");
   badge.classList.add("show");
-  setTimeout(() => badge.classList.remove("show"), 2000);
+  setTimeout(() => {
+    badge.classList.remove("show");
+    updateProfileView();
+    showViewProfile();
+  }, 1200);
 }
 
-// ── Tabs ─────────────────────────────────────────────────────────
+// ── Tabs ──────────────────────────────────────────────────────────
 document.querySelectorAll(".tab").forEach(tab => {
   tab.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
@@ -227,11 +243,11 @@ document.querySelectorAll(".tab").forEach(tab => {
     tab.classList.add("active");
     document.getElementById(tab.dataset.tab + "-panel").classList.add("active");
     if (tab.dataset.tab === "library") loadLibrary();
-    document.getElementById("track-panel").classList.remove("open");
+    if (tab.dataset.tab === "profile") updateProfileView();
   });
 });
 
-// ── Search ───────────────────────────────────────────────────────
+// ── Search ────────────────────────────────────────────────────────
 document.getElementById("search").addEventListener("keypress", async (e) => {
   if (e.key !== "Enter") return;
   const query = e.target.value.trim();
@@ -240,7 +256,6 @@ document.getElementById("search").addEventListener("keypress", async (e) => {
   const loading = document.getElementById("loading");
   loading.style.display = "block";
   document.getElementById("results").innerHTML = "";
-  document.getElementById("track-panel").classList.remove("open");
 
   const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
   const data = await res.json();
@@ -262,211 +277,14 @@ document.getElementById("search").addEventListener("keypress", async (e) => {
   });
 });
 
-// ── Load Album ───────────────────────────────────────────────────
-async function loadAlbum(spotifyAlbum) {
-  const res = await fetch(`/api/album?id=${spotifyAlbum.id}`);
-  const full = await res.json();
-
-  currentAlbum = {
-    id: spotifyAlbum.id,
-    name: spotifyAlbum.name,
-    artist: spotifyAlbum.artists[0]?.name || "",
-    cover: spotifyAlbum.images[0]?.url || "",
-    release_date: full.release_date || "",
-    genres: (full.genres || []).join(", ")
-  };
-
-  document.getElementById("tp-cover").src = currentAlbum.cover;
-  document.getElementById("tp-name").textContent = currentAlbum.name;
-  document.getElementById("tp-artist").textContent = currentAlbum.artist;
-  document.getElementById("tp-details").textContent =
-    [currentAlbum.release_date, currentAlbum.genres].filter(Boolean).join(" · ");
-
-  const { data: saved } = await sb
-    .from("albums")
-    .select("rating, thoughts")
-    .eq("id", currentAlbum.id)
-    .eq("user_id", currentUser.id)
-    .single();
-
-  renderStars(saved?.rating || 0);
-  document.getElementById("album-thoughts").value = saved?.thoughts || "";
-
-  const tracksRes = await fetch(`/api/tracks?id=${spotifyAlbum.id}`);
-  const tracksData = await tracksRes.json();
-  renderTracks(tracksData.items || []);
-
-  document.getElementById("track-panel").classList.add("open");
-  document.getElementById("track-panel").scrollIntoView({ behavior: "smooth" });
-}
-
-// ── Stars ────────────────────────────────────────────────────────
-function renderStars(selected) {
-  const container = document.getElementById("album-stars");
-  container.innerHTML = "";
-  for (let i = 1; i <= 5; i++) {
-    const star = document.createElement("span");
-    star.className = "star" + (i <= selected ? " filled" : "");
-    star.textContent = "★";
-    star.addEventListener("click", () => {
-      container.dataset.rating = i;
-      highlightStars(i);
-      autoSaveAlbum();
-    });
-    star.addEventListener("mouseover", () => highlightStars(i));
-    star.addEventListener("mouseout", () => {
-      highlightStars(parseInt(container.dataset.rating || "0"));
-    });
-    container.appendChild(star);
-  }
-  container.dataset.rating = selected;
-}
-
-function highlightStars(n) {
-  document.querySelectorAll("#album-stars .star").forEach((s, i) => {
-    s.classList.toggle("filled", i < n);
-  });
-}
-
-// ── Auto Save Album ───────────────────────────────────────────────
-async function autoSaveAlbum() {
-  if (!currentAlbum || !currentUser) return;
-  const rating = parseInt(document.getElementById("album-stars").dataset.rating || "0");
-  const thoughts = document.getElementById("album-thoughts").value.trim();
-  if (!rating && !thoughts) return;
-
-  await sb.from("albums").upsert({
-    id: currentAlbum.id,
-    user_id: currentUser.id,
-    name: currentAlbum.name,
-    artist: currentAlbum.artist,
-    cover: currentAlbum.cover,
-    release_date: currentAlbum.release_date,
-    genres: currentAlbum.genres,
-    rating,
-    thoughts
-  }, { onConflict: "id,user_id" });
-}
-
-// Album thoughts autosave
-document.getElementById("album-thoughts").addEventListener("input", () => {
-  clearTimeout(saveThoughtsTimer);
-  saveThoughtsTimer = setTimeout(() => autoSaveAlbum(), 800);
-});
-
-// ── Save Everything ───────────────────────────────────────────────
-async function saveAll() {
-  if (!currentAlbum || !currentUser) return;
-
-  const btn = document.getElementById("save-btn");
-  btn.textContent = "Saving...";
-  btn.disabled = true;
-
-  const rating = parseInt(document.getElementById("album-stars").dataset.rating || "0");
-  const thoughts = document.getElementById("album-thoughts").value.trim();
-
-  if (rating || thoughts) {
-    await sb.from("albums").upsert({
-      id: currentAlbum.id,
-      user_id: currentUser.id,
-      name: currentAlbum.name,
-      artist: currentAlbum.artist,
-      cover: currentAlbum.cover,
-      release_date: currentAlbum.release_date,
-      genres: currentAlbum.genres,
-      rating,
-      thoughts
-    }, { onConflict: "id,user_id" });
-  }
-
-  const trackItems = document.querySelectorAll(".track-item");
-  const upserts = [];
-  trackItems.forEach(item => {
-    const review = item.querySelector("textarea").value;
-    upserts.push({
-      id: item.dataset.trackId,
-      user_id: currentUser.id,
-      album_id: currentAlbum.id,
-      name: item.dataset.trackName,
-      track_number: parseInt(item.dataset.trackNum),
-      review
-    });
-  });
-
-  if (upserts.length > 0) {
-    await sb.from("tracks").upsert(upserts, { onConflict: "id,user_id" });
-  }
-
-  btn.textContent = "Saved ✓";
-  btn.style.borderColor = "var(--saved)";
-  btn.style.color = "var(--saved)";
-  setTimeout(() => {
-    btn.textContent = "Save Everything";
-    btn.style.borderColor = "";
-    btn.style.color = "";
-    btn.disabled = false;
-  }, 2000);
-}
-
-// ── Render Tracks ────────────────────────────────────────────────
-async function renderTracks(tracks) {
-  const list = document.getElementById("tracks-list");
-  list.innerHTML = "";
-
-  const { data: savedReviews } = await sb
-    .from("tracks")
-    .select("id, review")
-    .eq("album_id", currentAlbum.id)
-    .eq("user_id", currentUser.id);
-
-  const reviewMap = {};
-  (savedReviews || []).forEach(r => { reviewMap[r.id] = r.review; });
-
-  tracks.forEach(track => {
-    const item = document.createElement("div");
-    item.className = "track-item";
-    item.dataset.trackId = track.id;
-    item.dataset.trackNum = track.track_number;
-    item.dataset.trackName = track.name;
-
-    item.innerHTML = `
-      <div class="track-num">${track.track_number}</div>
-      <div class="track-info">
-        <div class="track-name">${track.name}</div>
-        <textarea placeholder="Your thoughts on this track...">${reviewMap[track.id] || ""}</textarea>
-      </div>
-    `;
-
-    const textarea = item.querySelector("textarea");
-    let trackTimer = null;
-    textarea.addEventListener("input", () => {
-      clearTimeout(trackTimer);
-      trackTimer = setTimeout(async () => {
-        await sb.from("tracks").upsert({
-          id: track.id,
-          user_id: currentUser.id,
-          album_id: currentAlbum.id,
-          name: track.name,
-          track_number: track.track_number,
-          review: textarea.value
-        }, { onConflict: "id,user_id" });
-      }, 800);
-    });
-
-    list.appendChild(item);
-  });
-}
-
-// ── Library ──────────────────────────────────────────────────────
+// ── Library ───────────────────────────────────────────────────────
 async function loadLibrary() {
   const container = document.getElementById("library-content");
   container.innerHTML = "<p style='color:#555;font-size:13px;letter-spacing:1px'>Loading...</p>";
 
   const { data: albums } = await sb
-    .from("albums")
-    .select("*")
-    .eq("user_id", currentUser.id)
-    .order("name");
+    .from("albums").select("*")
+    .eq("user_id", currentUser.id).order("name");
 
   if (!albums || albums.length === 0) {
     container.innerHTML = "<p style='color:#555;font-size:14px;letter-spacing:1px'>No albums saved yet. Rate or review an album to add it here.</p>";
@@ -488,11 +306,11 @@ async function loadLibrary() {
       <div style="flex:1">
         <div class="library-name">${album.name}</div>
         <div class="library-artist">${album.artist}</div>
-        <div class="library-stars">${starsHtml}</div>
+        <div>${starsHtml}</div>
         ${album.thoughts ? `<div class="library-thoughts">"${album.thoughts}"</div>` : ""}
         ${album.release_date ? `<div style="font-size:11px;color:#444;margin-top:6px">${album.release_date}${album.genres ? " · " + album.genres : ""}</div>` : ""}
       </div>
-      <button class="delete-btn" title="Remove from library">✕</button>
+      <button class="delete-btn" title="Remove">✕</button>
     `;
 
     card.querySelector(".delete-btn").addEventListener("click", async (e) => {
@@ -502,7 +320,7 @@ async function loadLibrary() {
       await sb.from("albums").delete().eq("id", album.id).eq("user_id", currentUser.id);
       card.remove();
       if (!document.querySelector(".library-card")) {
-        container.innerHTML = "<p style='color:#555;font-size:14px;letter-spacing:1px'>No albums saved yet. Rate or review an album to add it here.</p>";
+        container.innerHTML = "<p style='color:#555;font-size:14px;letter-spacing:1px'>No albums saved yet.</p>";
       }
     });
 

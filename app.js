@@ -128,17 +128,15 @@ document.getElementById("login-btn").addEventListener("click", async () => {
   }
 });
 
-// ── Log Out ───────────────────────────────────────────────────────
-document.getElementById("logout-btn").addEventListener("click", async () => {
-  await sb.auth.signOut();
-  currentUser = null;
-  currentProfile = null;
-  document.getElementById("app").style.display = "none";
-  document.getElementById("auth-screen").style.display = "flex";
-});
-
 // ── Session Handling ──────────────────────────────────────────────
 let authInitialized = false;
+
+// ── Log Out ───────────────────────────────────────────────────────
+document.getElementById("logout-btn").addEventListener("click", async () => {
+  authInitialized = false;
+  await sb.auth.signOut();
+  window.location.reload();
+});
 
 sb.auth.onAuthStateChange(async (_event, session) => {
   // Always hide loading spinner
@@ -146,22 +144,19 @@ sb.auth.onAuthStateChange(async (_event, session) => {
 
   if (!authInitialized) {
     authInitialized = true;
-    // On first fire, trust whatever session state we get
     if (session?.user) {
       currentUser = session.user;
+      await loadProfile();
       document.getElementById("auth-screen").style.display = "none";
       document.getElementById("app").style.display = "block";
-      await loadProfile();
     } else {
-      // No session — but wait 1 second before showing login
-      // in case Supabase fires SIGNED_OUT before TOKEN_REFRESHED
       setTimeout(async () => {
         const { data: { session: retrySession } } = await sb.auth.getSession();
         if (retrySession?.user) {
           currentUser = retrySession.user;
+          await loadProfile();
           document.getElementById("auth-screen").style.display = "none";
           document.getElementById("app").style.display = "block";
-          await loadProfile();
         } else {
           document.getElementById("auth-screen").style.display = "flex";
         }
@@ -170,12 +165,11 @@ sb.auth.onAuthStateChange(async (_event, session) => {
     return;
   }
 
-  // After init: only handle explicit sign in / sign out
   if (_event === "SIGNED_IN") {
     currentUser = session.user;
+    await loadProfile();
     document.getElementById("auth-screen").style.display = "none";
     document.getElementById("app").style.display = "block";
-    await loadProfile();
   } else if (_event === "SIGNED_OUT") {
     currentUser = null;
     currentProfile = null;
@@ -186,26 +180,24 @@ sb.auth.onAuthStateChange(async (_event, session) => {
 
 // ── Load Profile ──────────────────────────────────────────────────
 async function loadProfile() {
-  // Show fallback name immediately
-  document.getElementById("user-name").textContent = currentUser.email.split("@")[0];
-
   const { data: profile } = await sb
     .from("profiles").select("*")
     .eq("user_id", currentUser.id).single();
 
   currentProfile = profile || null;
 
+  // Only now show the app with the correct name
   const name = profile?.username || currentUser.email.split("@")[0];
   document.getElementById("user-name").textContent = name;
 
-  // Update header avatar
   if (profile?.avatar_url) {
     const av = document.getElementById("user-avatar");
     av.src = profile.avatar_url;
     av.style.display = "block";
+  } else {
+    document.getElementById("user-avatar").style.display = "none";
   }
 
-  // Update profile view
   updateProfileView();
 }
 

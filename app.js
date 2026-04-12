@@ -62,7 +62,7 @@ document.getElementById("signup-btn").addEventListener("click", async () => {
   }
 
   if (data.user) {
-    await sb.from("profiles").upsert({ user_id: data.user.id, username });
+    await sb.from("profiles").upsert({ user_id: data.user.id, username, email });
   }
 
   btn.textContent = "Create Account";
@@ -71,13 +71,13 @@ document.getElementById("signup-btn").addEventListener("click", async () => {
 
 // ── Log In ────────────────────────────────────────────────────────
 document.getElementById("login-btn").addEventListener("click", async () => {
-  const email = document.getElementById("login-email").value.trim();
+  const username = document.getElementById("login-username").value.trim();
   const password = document.getElementById("login-password").value;
   const errorEl = document.getElementById("login-error");
 
   errorEl.classList.remove("show");
-  if (!email || !password) {
-    errorEl.textContent = "Please enter your email and password.";
+  if (!username || !password) {
+    errorEl.textContent = "Please enter your username and password.";
     errorEl.classList.add("show");
     return;
   }
@@ -86,10 +86,42 @@ document.getElementById("login-btn").addEventListener("click", async () => {
   btn.textContent = "Logging in...";
   btn.disabled = true;
 
-  const { error } = await sb.auth.signInWithPassword({ email, password });
+  // Look up email from username
+  const { data: profile } = await sb
+    .from("profiles")
+    .select("user_id")
+    .eq("username", username)
+    .single();
+
+  if (!profile) {
+    errorEl.textContent = "Username not found.";
+    errorEl.classList.add("show");
+    btn.textContent = "Log In";
+    btn.disabled = false;
+    return;
+  }
+
+  // Get email for this user_id from auth
+  // We store email during signup in a way we can retrieve it
+  // Simplest: try signing in won't work without email — so we store email in profiles too
+  const { data: profileWithEmail } = await sb
+    .from("profiles")
+    .select("email")
+    .eq("username", username)
+    .single();
+
+  if (!profileWithEmail?.email) {
+    errorEl.textContent = "Could not find account. Try logging in with email.";
+    errorEl.classList.add("show");
+    btn.textContent = "Log In";
+    btn.disabled = false;
+    return;
+  }
+
+  const { error } = await sb.auth.signInWithPassword({ email: profileWithEmail.email, password });
 
   if (error) {
-    errorEl.textContent = "Incorrect email or password.";
+    errorEl.textContent = "Incorrect password.";
     errorEl.classList.add("show");
     btn.textContent = "Log In";
     btn.disabled = false;

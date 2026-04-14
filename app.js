@@ -36,14 +36,23 @@ function showAppScreen() {
 }
 
 // ── Boot: check session on page load ─────────────────────────────
+// Timeout fallback in case Supabase is slow/paused
+const bootTimeout = setTimeout(() => showAuth(), 5000);
+
 (async () => {
   showLoading();
-  const { data: { session } } = await sb.auth.getSession();
-  if (session?.user) {
-    currentUser = session.user;
-    await loadProfile();
-    showAppScreen();
-  } else {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    clearTimeout(bootTimeout);
+    if (session?.user) {
+      currentUser = session.user;
+      await loadProfile();
+      showAppScreen();
+    } else {
+      showAuth();
+    }
+  } catch (e) {
+    clearTimeout(bootTimeout);
     showAuth();
   }
 })();

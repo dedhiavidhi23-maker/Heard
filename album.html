@@ -18,12 +18,12 @@
       header {
         display: flex;
         align-items: center;
-        gap: 20px;
         padding: 24px 40px;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
       }
 
       #back-btn {
-        display: flex;
+        display: inline-flex;
         align-items: center;
         gap: 6px;
         background: rgba(0,0,0,0.25);
@@ -37,6 +37,7 @@
         letter-spacing: 1px;
         text-transform: uppercase;
         transition: background 0.2s;
+        margin: 24px 40px 0;
       }
 
       #back-btn:hover { background: rgba(0,0,0,0.4); }
@@ -229,9 +230,9 @@
 
   <body>
     <header>
-      <button id="back-btn" onclick="history.back()">← Back</button>
       <a href="index.html">HEARD</a>
     </header>
+    <button id="back-btn" onclick="history.back()">← Back</button>
 
     <div id="loading-page">Loading...</div>
     <div id="not-logged-in">

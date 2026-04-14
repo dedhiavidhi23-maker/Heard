@@ -211,9 +211,15 @@
       .panel.active { display: block; }
 
       /* SEARCH */
-      #search {
+      #search-wrap {
+        position: relative;
         width: 100%;
         max-width: 500px;
+        margin-bottom: 36px;
+      }
+
+      #search {
+        width: 100%;
         padding: 14px 18px;
         background: var(--surface);
         border: 1px solid var(--border);
@@ -223,12 +229,67 @@
         font-size: 15px;
         outline: none;
         transition: border-color 0.2s;
-        margin-bottom: 36px;
         display: block;
+        margin-bottom: 0;
       }
 
       #search:focus { border-color: var(--accent); }
       #search::placeholder { color: var(--muted); }
+
+      #suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-top: none;
+        border-radius: 0 0 6px 6px;
+        z-index: 100;
+        display: none;
+        max-height: 360px;
+        overflow-y: auto;
+      }
+
+      #suggestions.open { display: block; }
+
+      .suggestion-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 14px;
+        cursor: pointer;
+        transition: background 0.15s;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .suggestion-item:last-child { border-bottom: none; }
+      .suggestion-item:hover { background: #1e1e1e; }
+
+      .suggestion-item img {
+        width: 40px;
+        height: 40px;
+        object-fit: cover;
+        border-radius: 3px;
+        flex-shrink: 0;
+        display: block;
+      }
+
+      .suggestion-name {
+        font-size: 13px;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .suggestion-artist {
+        font-size: 12px;
+        color: var(--muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
 
       .album-grid {
         display: grid;
@@ -570,7 +631,10 @@
 
       <!-- SEARCH PANEL -->
       <div class="panel active" id="search-panel">
-        <input id="search" placeholder="Search for an album..." />
+        <div id="search-wrap">
+          <input id="search" placeholder="Search for an album..." autocomplete="off" />
+          <div id="suggestions"></div>
+        </div>
         <div id="loading">Searching...</div>
         <div id="results" class="album-grid"></div>
       </div>

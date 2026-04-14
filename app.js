@@ -17,6 +17,37 @@ function togglePw(inputId, btn) {
   btn.textContent = input.type === "password" ? "Show" : "Hide";
 }
 
+function showLoading() {
+  document.getElementById("init-loading").style.display = "flex";
+  document.getElementById("auth-screen").style.display = "none";
+  document.getElementById("app").style.display = "none";
+}
+
+function showAuth() {
+  document.getElementById("init-loading").style.display = "none";
+  document.getElementById("auth-screen").style.display = "flex";
+  document.getElementById("app").style.display = "none";
+}
+
+function showAppScreen() {
+  document.getElementById("init-loading").style.display = "none";
+  document.getElementById("auth-screen").style.display = "none";
+  document.getElementById("app").style.display = "block";
+}
+
+// ── Boot: check session on page load ─────────────────────────────
+(async () => {
+  showLoading();
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    currentUser = session.user;
+    await loadProfile();
+    showAppScreen();
+  } else {
+    showAuth();
+  }
+})();
+
 // ── Auth Tabs ─────────────────────────────────────────────────────
 document.querySelectorAll(".auth-tab").forEach(tab => {
   tab.addEventListener("click", () => {
@@ -62,8 +93,14 @@ document.getElementById("signup-btn").addEventListener("click", async () => {
   }
 
   if (data.user) {
-    await sb.from("profiles").upsert({ user_id: data.user.id, username, email });
-    await onLoginSuccess(data.user);
+    await sb.from("profiles").upsert({
+      user_id: data.user.id,
+      username,
+      email
+    });
+    currentUser = data.user;
+    await loadProfile();
+    showAppScreen();
   }
 
   btn.textContent = "Create Account";
@@ -88,13 +125,13 @@ document.getElementById("login-btn").addEventListener("click", async () => {
   btn.disabled = true;
 
   // Look up email from username
-  const { data: profile } = await sb
+  const { data: profileData } = await sb
     .from("profiles")
-    .select("user_id")
+    .select("email")
     .eq("username", username)
     .single();
 
-  if (!profile) {
+  if (!profileData?.email) {
     errorEl.textContent = "Username not found.";
     errorEl.classList.add("show");
     btn.textContent = "Log In";
@@ -102,109 +139,62 @@ document.getElementById("login-btn").addEventListener("click", async () => {
     return;
   }
 
-  // Get email for this user_id from auth
-  // We store email during signup in a way we can retrieve it
-  // Simplest: try signing in won't work without email — so we store email in profiles too
-  const { data: profileWithEmail } = await sb
-    .from("profiles")
-    .select("email")
-    .eq("username", username)
-    .single();
-
-  if (!profileWithEmail?.email) {
-    errorEl.textContent = "Could not find account. Try logging in with email.";
-    errorEl.classList.add("show");
-    btn.textContent = "Log In";
-    btn.disabled = false;
-    return;
-  }
-
-  const { data, error } = await sb.auth.signInWithPassword({ email: profileWithEmail.email, password });
+  const { data, error } = await sb.auth.signInWithPassword({
+    email: profileData.email,
+    password
+  });
 
   if (error) {
     errorEl.textContent = "Incorrect password.";
     errorEl.classList.add("show");
     btn.textContent = "Log In";
     btn.disabled = false;
-  } else {
-    await onLoginSuccess(data.user);
+    return;
   }
-});
 
-// ── Session Handling ──────────────────────────────────────────────
-let authInitialized = false;
+  currentUser = data.user;
+  await loadProfile();
+  showAppScreen();
+  btn.textContent = "Log In";
+  btn.disabled = false;
+});
 
 // ── Log Out ───────────────────────────────────────────────────────
 document.getElementById("logout-btn").addEventListener("click", async () => {
-  authInitialized = true; // prevent re-login after signOut
   await sb.auth.signOut();
   currentUser = null;
   currentProfile = null;
-  document.getElementById("app").style.display = "none";
-  document.getElementById("init-loading").style.display = "none";
-  document.getElementById("auth-screen").style.display = "flex";
+  showAuth();
 });
-
-sb.auth.onAuthStateChange(async (_event, session) => {
-  if (authInitialized) return;
-  authInitialized = true;
-  document.getElementById("init-loading").style.display = "none";
-
-  if (session?.user) {
-    currentUser = session.user;
-    await loadProfile();
-    document.getElementById("auth-screen").style.display = "none";
-    document.getElementById("app").style.display = "block";
-  } else {
-    document.getElementById("auth-screen").style.display = "flex";
-  }
-});
-
-// Fallback: if onAuthStateChange never fires within 3s, show login screen
-setTimeout(() => {
-  if (!authInitialized) {
-    authInitialized = true;
-    document.getElementById("init-loading").style.display = "none";
-    document.getElementById("auth-screen").style.display = "flex";
-  }
-}, 3000);
-
-// After login form succeeds, manually show app
-async function onLoginSuccess(user) {
-  authInitialized = true;
-  currentUser = user;
-  await loadProfile();
-  document.getElementById("auth-screen").style.display = "none";
-  document.getElementById("app").style.display = "block";
-}
 
 // ── Load Profile ──────────────────────────────────────────────────
 async function loadProfile() {
   const { data: profile } = await sb
-    .from("profiles").select("*")
-    .eq("user_id", currentUser.id).single();
+    .from("profiles")
+    .select("*")
+    .eq("user_id", currentUser.id)
+    .single();
 
   currentProfile = profile || null;
 
-  // Only now show the app with the correct name
   const name = profile?.username || currentUser.email.split("@")[0];
   document.getElementById("user-name").textContent = name;
 
+  const av = document.getElementById("user-avatar");
   if (profile?.avatar_url) {
-    const av = document.getElementById("user-avatar");
     av.src = profile.avatar_url;
     av.style.display = "block";
   } else {
-    document.getElementById("user-avatar").style.display = "none";
+    av.style.display = "none";
   }
 
   updateProfileView();
 }
 
-// ── Profile View Mode ─────────────────────────────────────────────
+// ── Profile View ──────────────────────────────────────────────────
 function updateProfileView() {
   const p = currentProfile;
-  const name = p?.username || currentUser.email.split("@")[0];
+  const name = p?.username || currentUser?.email?.split("@")[0] || "";
 
   document.getElementById("profile-view-username").textContent = name;
   document.getElementById("profile-view-bio").textContent = p?.bio || "";
@@ -215,13 +205,10 @@ function updateProfileView() {
     viewAvatar.src = p.avatar_url;
   } else {
     viewAvatar.src = "";
-    viewAvatar.style.background = "var(--surface)";
   }
 
-  // Load stats
   loadProfileStats();
 
-  // Pre-fill edit form
   if (p) {
     document.getElementById("profile-username").value = p.username || "";
     document.getElementById("profile-bio").value = p.bio || "";
@@ -251,7 +238,6 @@ function showViewProfile() {
   document.getElementById("profile-view").style.display = "block";
 }
 
-// Avatar preview in edit mode
 document.getElementById("profile-avatar-url").addEventListener("input", (e) => {
   const url = e.target.value.trim();
   if (url) document.getElementById("profile-avatar-preview").src = url;
@@ -266,19 +252,25 @@ async function saveProfile() {
   const genres = document.getElementById("profile-genres").value.trim();
   const avatar_url = document.getElementById("profile-avatar-url").value.trim();
 
-  await sb.from("profiles").upsert({ user_id: currentUser.id, username, bio, genres, avatar_url });
+  await sb.from("profiles").upsert({
+    user_id: currentUser.id,
+    username,
+    bio,
+    genres,
+    avatar_url,
+    email: currentProfile?.email || currentUser.email
+  });
 
-  currentProfile = { user_id: currentUser.id, username, bio, genres, avatar_url };
+  currentProfile = { ...currentProfile, username, bio, genres, avatar_url };
 
-  // Update header
   document.getElementById("user-name").textContent = username || currentUser.email.split("@")[0];
+
+  const av = document.getElementById("user-avatar");
   if (avatar_url) {
-    const av = document.getElementById("user-avatar");
     av.src = avatar_url;
     av.style.display = "block";
   }
 
-  // Show saved badge then switch back to view
   const badge = document.getElementById("profile-saved");
   badge.classList.add("show");
   setTimeout(() => {

@@ -301,34 +301,60 @@ document.querySelectorAll(".tab").forEach(tab => {
   });
 });
 
-// ── Search ────────────────────────────────────────────────────────
-document.getElementById("search").addEventListener("keypress", async (e) => {
-  if (e.key !== "Enter") return;
-  const query = e.target.value.trim();
-  if (!query) return;
+// ── Search Suggestions ────────────────────────────────────────────
+let searchTimer = null;
+const searchInput = document.getElementById("search");
+const suggestionsEl = document.getElementById("suggestions");
 
-  const loading = document.getElementById("loading");
-  loading.style.display = "block";
-  document.getElementById("results").innerHTML = "";
+searchInput.addEventListener("input", () => {
+  clearTimeout(searchTimer);
+  const query = searchInput.value.trim();
 
-  const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-  const data = await res.json();
-  loading.style.display = "none";
+  if (query.length < 3) {
+    suggestionsEl.classList.remove("open");
+    suggestionsEl.innerHTML = "";
+    return;
+  }
 
-  const resultsDiv = document.getElementById("results");
-  (data.albums?.items || []).forEach(album => {
-    const card = document.createElement("div");
-    card.className = "album-card";
-    card.innerHTML = `
-      <img src="${album.images[0]?.url || ""}" alt="${album.name}" />
-      <div class="album-name">${album.name}</div>
-      <div class="album-artist">${album.artists[0]?.name || ""}</div>
-    `;
-    card.addEventListener("click", () => {
-      window.location.href = `album.html?id=${album.id}`;
+  searchTimer = setTimeout(async () => {
+    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+    const data = await res.json();
+    const items = data.albums?.items || [];
+
+    suggestionsEl.innerHTML = "";
+
+    if (items.length === 0) {
+      suggestionsEl.classList.remove("open");
+      return;
+    }
+
+    items.slice(0, 8).forEach(album => {
+      const item = document.createElement("div");
+      item.className = "suggestion-item";
+      item.innerHTML = `
+        <img src="${album.images[0]?.url || ""}" alt="${album.name}" />
+        <div>
+          <div class="suggestion-name">${album.name}</div>
+          <div class="suggestion-artist">${album.artists[0]?.name || ""}</div>
+        </div>
+      `;
+      item.addEventListener("click", () => {
+        suggestionsEl.classList.remove("open");
+        searchInput.value = "";
+        window.location.href = `album.html?id=${album.id}`;
+      });
+      suggestionsEl.appendChild(item);
     });
-    resultsDiv.appendChild(card);
-  });
+
+    suggestionsEl.classList.add("open");
+  }, 400);
+});
+
+// Close suggestions when clicking outside
+document.addEventListener("click", (e) => {
+  if (!document.getElementById("search-wrap").contains(e.target)) {
+    suggestionsEl.classList.remove("open");
+  }
 });
 
 // ── Library ───────────────────────────────────────────────────────
